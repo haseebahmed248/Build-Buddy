@@ -75,7 +75,7 @@ Build Buddy simplifies the complex process of home construction by providing an 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/haseebahmed248/build-buddy.git
+git clone https://github.com/haseebahmed248/Build-Buddy.git
 ```
 
 2. Install dependencies:
@@ -104,6 +104,6 @@ The application follows a clean architecture pattern with:
 
 ## 📧 Contact
 
-Project Link: [https://github.com/yourusername/build-buddy](https://github.com/yourusername/build-buddy)
+Project Link: [https://github.com/haseebahmed248/Build-Buddy](https://github.com/haseebahmed248/Build-Buddy)
 
 ---
