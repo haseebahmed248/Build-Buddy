@@ -93,7 +93,7 @@ class AppRoutes {
         name: '/find-professionals',
         page: () => const FindProfessionalsDashboard()),
     GetPage(name: '/settings', page: () => const SettingsDashboard()),
-    GetPage(
+   /* GetPage(
       name: '/my-projects',
       page: () {
         // Fetch the userId dynamically from Firebase Authentication
@@ -103,9 +103,9 @@ class AppRoutes {
           userType: '',
         );
       },
-    ),
+    ),*/
 
-    //GetPage(name: '/my-projects', page: () => const MyProjectsDashboard()),
+    GetPage(name: '/my-projects', page: () => const MyProjectsDashboard()),
     GetPage(name: '/messages', page: () => const MessagesDashboard()),
     GetPage(name: '/payments', page: () => const PaymentsDashboard()),
     GetPage(name: '/rate-review', page: () => const RateReviewDashboard()),
