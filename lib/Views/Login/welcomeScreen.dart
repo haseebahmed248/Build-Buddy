@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:buildbuddy/views/DashBoard/stakeHolderSelection.dart';
+import 'package:buildbuddy/Views/DashBoard/stakeHolderSelection.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
@@ -11,8 +11,8 @@ class WelcomeScreen extends StatefulWidget {
 class _WelcomeScreenState extends State<WelcomeScreen> {
   // Moved to a separate class for better organization
   static const _gradientColors = [
-    Color(0xFF1E3799),  // Deep Blue
-    Color(0xFF4834DF),  // Royal Blue
+    Color(0xFF1E3799), // Deep Blue
+    Color(0xFF4834DF), // Royal Blue
   ];
 
   final List<QuickAction> _quickActions = [
@@ -136,7 +136,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                  icon: const Icon(Icons.notifications_outlined,
+                      color: Colors.white),
                   onPressed: () {/* Handle notifications */},
                 ),
               ],
@@ -424,51 +425,50 @@ class QuickActionCard extends StatelessWidget {
             ),
           ],
         ),
-        child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Calculate appropriate sizes based on constraints
-              final iconSize = constraints.maxWidth * 0.3;
-              final fontSize = constraints.maxWidth * 0.15;
+        child: LayoutBuilder(builder: (context, constraints) {
+          // Calculate appropriate sizes based on constraints
+          final iconSize = constraints.maxWidth * 0.3;
+          final fontSize = constraints.maxWidth * 0.15;
 
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: action.color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: action.color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  action.icon,
+                  color: action.color,
+                  size: iconSize,
+                ),
+              ),
+              const Spacer(flex: 1),
+              Expanded(
+                flex: 2,
+                child: Center(
+                  child: Text(
+                    action.label,
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      color: Colors.grey[700],
                     ),
-                    child: Icon(
-                      action.icon,
-                      color: action.color,
-                      size: iconSize,
-                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const Spacer(flex: 1),
-                  Expanded(
-                    flex: 2,
-                    child: Center(
-                      child: Text(
-                        action.label,
-                        style: TextStyle(
-                          fontSize: fontSize,
-                          color: Colors.grey[700],
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }
-        ),
+                ),
+              ),
+            ],
+          );
+        }),
       ),
     );
   }
 }
+
 class UpdateItem extends StatelessWidget {
   final IconData icon;
   final String title;

@@ -42,39 +42,20 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
     }
     return null;
   }
+
   Future<bool> _isAdminCodeValid(String enteredCode) async {
     try {
       final DatabaseReference ref = FirebaseDatabase.instance.ref('admin_code');
       final DataSnapshot snapshot = await ref.get();
 
-      if (snapshot.exists) {
-        String storedCode = snapshot.value.toString().trim();
-        String enteredTrimmedCode = enteredCode.trim();
-        return storedCode == enteredTrimmedCode;
-      }
-      return false;
+      return snapshot.exists &&
+          snapshot.value != null &&
+          snapshot.value.toString().trim() == enteredCode.trim();
     } catch (error) {
-      print("Error validating admin code: $error");
+      print("Admin code validation error: $error");
       return false;
     }
   }
-
-  /*Future<bool> _isAdminCodeValid(String enteredCode) async {
-    try {
-      final DatabaseReference ref = FirebaseDatabase.instance.ref('admin_code');
-      final DataSnapshot snapshot = await ref.get();
-
-      if (snapshot.exists) {
-        String storedCode = snapshot.value.toString().trim();
-        String enteredTrimmedCode = enteredCode.trim();
-        return storedCode == enteredTrimmedCode;
-      }
-      return false;
-    } catch (error) {
-      print("Error validating admin code: $error");
-      return false;
-    }
-  }*/
 
   void _handleSignIn() async {
     if (!_formKey.currentState!.validate()) return;
@@ -82,7 +63,8 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
     setState(() => _isLoading = true);
 
     try {
-      bool isAdminCodeValid = await _isAdminCodeValid(_adminCodeController.text);
+      bool isAdminCodeValid =
+          await _isAdminCodeValid(_adminCodeController.text);
       if (!isAdminCodeValid) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -127,6 +109,7 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
         }
       }
     } catch (e) {
+      print('Sign-in error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
@@ -168,7 +151,6 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
               ),
             ),
           ),
-
           Positioned(
             bottom: -100,
             left: -50,
@@ -193,7 +175,6 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
               ),
             ),
           ),
-          //
           // Sign-in form
           SafeArea(
             child: SingleChildScrollView(
@@ -236,8 +217,11 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
                         prefixIcon: Icons.lock_outline,
                         obscureText: _obscurePassword,
                         suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
                         ),
                         validator: (value) => value != null && value.length >= 8
                             ? null
@@ -258,7 +242,8 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
                         children: [
                           Checkbox(
                             value: _rememberMe,
-                            onChanged: (value) => setState(() => _rememberMe = value ?? false),
+                            onChanged: (value) =>
+                                setState(() => _rememberMe = value ?? false),
                           ),
                           const Text('Remember me'),
                         ],

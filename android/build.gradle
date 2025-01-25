@@ -28,7 +28,7 @@ allprojects {
         allprojects {
             tasks.withType(JavaCompile) {
                 options.fork = true
-                options.forkOptions.javaHome = file('C:\\Program Files\\Java\\jdk-17')
+                options.forkOptions.javaHome = file('/usr/lib/jvm/java-17-openjdk-amd64')
             }
         }
 

@@ -1,3 +1,487 @@
+// import 'package:buildbuddy/Services/chat/chat_screen.dart';
+// import 'package:flutter/material.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:get/get.dart';
+
+// final TextEditingController _searchController = TextEditingController();
+// String _searchQuery = '';
+
+// class MessagesDashboard extends StatefulWidget {
+//   const MessagesDashboard({Key? key}) : super(key: key);
+
+//   @override
+//   _MessagesDashboardState createState() => _MessagesDashboardState();
+// }
+
+// class _MessagesDashboardState extends State<MessagesDashboard> {
+//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+//   final FirebaseAuth _auth = FirebaseAuth.instance;
+//   String? currentUserRole;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _getCurrentUserRole();
+//   }
+
+//   Future<void> _getCurrentUserRole() async {
+//     final user = _auth.currentUser;
+//     if (user != null) {
+//       // Check all possible role collections
+//       final roles = ['homeowner', 'contractor', 'vendor', 'architect', 'admin'];
+//       for (String role in roles) {
+//         // Correctly accessing nested collections in Firebase
+//         final doc = await _firestore
+//             .collection('user')
+//             .doc(role)
+//             .collection(user.uid)
+//             .doc('profile')
+//             .get();
+
+//         if (doc.exists) {
+//           setState(() {
+//             currentUserRole = role;
+//           });
+//           break;
+//         }
+//       }
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       backgroundColor: const Color(0xFFF5F6FA),
+//       body: Stack(
+//         children: [
+//           // Background Decorative Circles
+//           Positioned(
+//             top: -100,
+//             right: -50,
+//             child: Container(
+//               width: 200,
+//               height: 200,
+//               decoration: BoxDecoration(
+//                 shape: BoxShape.circle,
+//                 color: const Color(0xFFFF9800).withOpacity(0.1),
+//               ),
+//             ),
+//           ),
+//           Positioned(
+//             bottom: -80,
+//             left: -60,
+//             child: Container(
+//               width: 200,
+//               height: 200,
+//               decoration: BoxDecoration(
+//                 shape: BoxShape.circle,
+//                 color: const Color(0xFFFF5722).withOpacity(0.1),
+//               ),
+//             ),
+//           ),
+
+//           // Main Content
+//           SafeArea(
+//             child: Column(
+//               children: [
+//                 // Custom AppBar
+//                 buildCustomAppBar(),
+//                 // Chat List
+//                 Padding(
+//                   padding: const EdgeInsets.all(16.0),
+//                   child: TextField(
+//                     controller: _searchController,
+//                     decoration: InputDecoration(
+//                       hintText: 'Search conversations...',
+//                       prefixIcon: const Icon(Icons.search),
+//                       border: OutlineInputBorder(
+//                         borderRadius: BorderRadius.circular(12),
+//                       ),
+//                       filled: true,
+//                       fillColor: Colors.white,
+//                     ),
+//                     onChanged: (value) {
+//                       setState(() {
+//                         _searchQuery = value.toLowerCase();
+//                       });
+//                     },
+//                   ),
+//                 ),
+//                 Expanded(
+//                   child: StreamBuilder<QuerySnapshot>(
+//                     stream: _getChatStream(),
+//                     builder: (context, snapshot) {
+//                       if (!snapshot.hasData) {
+//                         return const Center(child: CircularProgressIndicator());
+//                       }
+
+//                       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+//                         return Center(
+//                           child: Column(
+//                             mainAxisAlignment: MainAxisAlignment.center,
+//                             children: [
+//                               Icon(Icons.message_outlined,
+//                                   size: 64, color: Colors.grey[400]),
+//                               const SizedBox(height: 16),
+//                               Text('No messages yet',
+//                                   style: TextStyle(
+//                                       color: Colors.grey[600], fontSize: 16)),
+//                             ],
+//                           ),
+//                         );
+//                       }
+
+//                       return ListView.builder(
+//                         padding: const EdgeInsets.all(16),
+//                         itemCount: snapshot.data!.docs.length,
+//                         itemBuilder: (context, index) {
+//                           final chatDoc = snapshot.data!.docs[index];
+//                           return buildChatTile(chatDoc);
+//                         },
+//                       );
+//                     },
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ],
+//       ),
+//       floatingActionButton: FloatingActionButton(
+//         onPressed: () => _showNewChatDialog(),
+//         backgroundColor: const Color(0xFFFF9800),
+//         child: const Icon(Icons.message),
+//       ),
+//     );
+//   }
+
+//   Widget buildCustomAppBar() {
+//     return Container(
+//       decoration: BoxDecoration(
+//         gradient: const LinearGradient(
+//           begin: Alignment.topLeft,
+//           end: Alignment.bottomRight,
+//           colors: [Color(0xFFFF9800), Color(0xFFFF5722)],
+//         ),
+//         boxShadow: [
+//           BoxShadow(
+//             color: Colors.black26,
+//             blurRadius: 10,
+//             offset: const Offset(0, 2),
+//           ),
+//         ],
+//       ),
+//       child: Padding(
+//         padding: const EdgeInsets.all(16.0),
+//         child: Row(
+//           children: [
+//             Container(
+//               padding: const EdgeInsets.all(8),
+//               decoration: BoxDecoration(
+//                 color: Colors.white24,
+//                 borderRadius: BorderRadius.circular(12),
+//               ),
+//               child: const Icon(
+//                 Icons.message_rounded,
+//                 color: Colors.white,
+//                 size: 28,
+//               ),
+//             ),
+//             const SizedBox(width: 16),
+//             const Expanded(
+//               child: Column(
+//                 crossAxisAlignment: CrossAxisAlignment.start,
+//                 children: [
+//                   Text(
+//                     'Messages',
+//                     style: TextStyle(
+//                       color: Colors.white,
+//                       fontSize: 20,
+//                       fontWeight: FontWeight.bold,
+//                     ),
+//                   ),
+//                   Text(
+//                     'Your Conversations',
+//                     style: TextStyle(
+//                       color: Colors.white70,
+//                       fontSize: 14,
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget buildChatTile(DocumentSnapshot chatDoc) {
+//     final data = chatDoc.data() as Map<String, dynamic>;
+//     final currentUserId = _auth.currentUser?.uid;
+//     final participants = List<String>.from(data['participants'] ?? []);
+//     final otherUserId = participants.firstWhere(
+//       (id) => id != currentUserId,
+//       orElse: () => '',
+//     );
+
+//     return FutureBuilder<DocumentSnapshot>(
+//       future: _getUserData(otherUserId),
+//       builder: (context, snapshot) {
+//         final otherUserName = snapshot.data?.get('displayName') ?? 'Loading...';
+//         final lastMessage = data['lastMessage'] ?? '';
+//         final lastMessageTime = data['lastMessageTime'] as Timestamp?;
+
+//         return Container(
+//           margin: const EdgeInsets.only(bottom: 8),
+//           decoration: BoxDecoration(
+//             color: Colors.white,
+//             borderRadius: BorderRadius.circular(12),
+//             boxShadow: [
+//               BoxShadow(
+//                 color: Colors.black.withOpacity(0.05),
+//                 blurRadius: 10,
+//                 offset: const Offset(0, 2),
+//               ),
+//             ],
+//           ),
+//           child: ListTile(
+//             onTap: () => Get.toNamed('/chat/${chatDoc.id}', arguments: {
+//               'otherUserId': otherUserId,
+//               'otherUserName': otherUserName,
+//             }),
+//             leading: CircleAvatar(
+//               backgroundColor: const Color(0xFFFF9800).withOpacity(0.1),
+//               child: Text(
+//                 otherUserName.isNotEmpty ? otherUserName[0].toUpperCase() : '?',
+//                 style: const TextStyle(
+//                   color: Color(0xFFFF9800),
+//                   fontWeight: FontWeight.bold,
+//                 ),
+//               ),
+//             ),
+//             title: Text(
+//               otherUserName,
+//               style: const TextStyle(
+//                 fontWeight: FontWeight.bold,
+//                 fontSize: 16,
+//               ),
+//             ),
+//             subtitle: Text(
+//               lastMessage,
+//               maxLines: 1,
+//               overflow: TextOverflow.ellipsis,
+//               style: TextStyle(
+//                 color: Colors.grey[600],
+//                 fontSize: 14,
+//               ),
+//             ),
+//             trailing: Text(
+//               _formatTimestamp(lastMessageTime),
+//               style: TextStyle(
+//                 color: Colors.grey[500],
+//                 fontSize: 12,
+//               ),
+//             ),
+//           ),
+//         );
+//       },
+//     );
+//   }
+
+//   String _formatTimestamp(Timestamp? timestamp) {
+//     if (timestamp == null) return '';
+
+//     final now = DateTime.now();
+//     final date = timestamp.toDate();
+//     final difference = now.difference(date);
+
+//     if (difference.inDays == 0) {
+//       return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+//     } else if (difference.inDays == 1) {
+//       return 'Yesterday';
+//     } else if (difference.inDays < 7) {
+//       return '${difference.inDays}d ago';
+//     } else {
+//       return '${date.day}/${date.month}/${date.year}';
+//     }
+//   }
+
+//   Future<DocumentSnapshot> _getUserData(String userId) {
+//     return _firestore.collection('users').doc(userId).get();
+//   }
+
+//   Stream<QuerySnapshot> _getChatStream() {
+//     final currentUserId = _auth.currentUser?.uid;
+//     if (currentUserId == null) return const Stream.empty();
+
+//     return _firestore
+//         .collection('chats')
+//         .where('participants', arrayContains: currentUserId)
+//         .orderBy('lastMessageTime', descending: true)
+//         .snapshots();
+//   }
+
+//   // Update _showNewChatDialog in your MessagesDashboard
+//   void _showNewChatDialog() {
+//     showDialog(
+//       context: context,
+//       builder: (context) => Dialog(
+//         child: Container(
+//           width: double.maxFinite,
+//           child: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             children: [
+//               AppBar(
+//                 title: Text('Start New Chat'),
+//                 automaticallyImplyLeading: false,
+//                 actions: [
+//                   IconButton(
+//                     icon: Icon(Icons.close),
+//                     onPressed: () => Navigator.pop(context),
+//                   ),
+//                 ],
+//               ),
+//               Expanded(
+//                 child: DefaultTabController(
+//                   length: 3,
+//                   child: Column(
+//                     children: [
+//                       TabBar(
+//                         tabs: [
+//                           Tab(text: 'Contractors'),
+//                           Tab(text: 'Vendors'),
+//                           Tab(text: 'Architects'),
+//                         ],
+//                       ),
+//                       Expanded(
+//                         child: TabBarView(
+//                           children: [
+//                             _buildUserList('contractor'),
+//                             _buildUserList('vendor'),
+//                             _buildUserList('architect'),
+//                           ],
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildUserList(String role) {
+//     return StreamBuilder<QuerySnapshot>(
+//       stream: _firestore
+//           .collection('user')
+//           .doc(role)
+//           .collection('profiles')
+//           .snapshots(),
+//       builder: (context, snapshot) {
+//         if (!snapshot.hasData) {
+//           return Center(child: CircularProgressIndicator());
+//         }
+
+//         final users = snapshot.data!.docs;
+//         if (users.isEmpty) {
+//           return Center(
+//             child: Text('No ${role}s available'),
+//           );
+//         }
+
+//         return ListView.builder(
+//           itemCount: users.length,
+//           itemBuilder: (context, index) {
+//             final userData = users[index].data() as Map<String, dynamic>;
+//             final userId = users[index].id;
+
+//             return ListTile(
+//               leading: CircleAvatar(
+//                 backgroundImage: userData['photoURL'] != null
+//                     ? NetworkImage(userData['photoURL'])
+//                     : null,
+//                 child: userData['photoURL'] == null
+//                     ? Text(userData['displayName']?[0] ?? '?')
+//                     : null,
+//               ),
+//               title: Text(userData['displayName'] ?? 'Unknown'),
+//               subtitle: Text('USER'),
+//               onTap: () => _startChat(userId, userData),
+//             );
+//           },
+//         );
+//       },
+//     );
+//   }
+
+//   Future<void> _startChat(
+//       String otherUserId, Map<String, dynamic> userData) async {
+//     final currentUserId = _auth.currentUser?.uid;
+//     if (currentUserId == null) return;
+
+//     // Check if chat exists
+//     final existingChats = await _firestore
+//         .collection('chats')
+//         .where('participants', arrayContains: currentUserId)
+//         .get();
+
+//     String? existingChatId;
+//     for (var doc in existingChats.docs) {
+//       final participants = List<String>.from(doc['participants']);
+//       if (participants.contains(otherUserId)) {
+//         existingChatId = doc.id;
+//         break;
+//       }
+//     }
+
+//     if (existingChatId != null) {
+//       Navigator.pop(context);
+//       Get.to(() => ChatScreen(
+//             chatId: existingChatId!,
+//             otherUserId: otherUserId,
+//             otherUserName: userData['displayName'] ?? 'Unknown',
+//           ));
+//       return;
+//     }
+
+//     // Create new chat
+//     final chatRef = await _firestore.collection('chats').add({
+//       'participants': [currentUserId, otherUserId],
+//       'createdAt': FieldValue.serverTimestamp(),
+//       'lastMessage': '',
+//       'lastMessageTime': FieldValue.serverTimestamp(),
+//     });
+
+//     // Create chat members
+//     await Future.wait([
+//       _firestore.collection('chat_members').add({
+//         'chatId': chatRef.id,
+//         'userId': currentUserId,
+//         'unreadCount': 0,
+//         'joinedAt': FieldValue.serverTimestamp(),
+//       }),
+//       _firestore.collection('chat_members').add({
+//         'chatId': chatRef.id,
+//         'userId': otherUserId,
+//         'unreadCount': 0,
+//         'joinedAt': FieldValue.serverTimestamp(),
+//       }),
+//     ]);
+
+//     Navigator.pop(context);
+//     Get.to(() => ChatScreen(
+//           chatId: chatRef.id,
+//           otherUserId: otherUserId,
+//           otherUserName: userData['displayName'] ?? 'Unknown',
+//         ));
+//   }
+// }
+
 import 'package:flutter/material.dart';
 
 class MessagesDashboard extends StatelessWidget {
@@ -40,98 +524,43 @@ class MessagesDashboard extends StatelessWidget {
             child: Column(
               children: [
                 // Custom AppBar
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFFFF9800),  // Orange
-                        const Color(0xFFFF5722),  // Deep Orange
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
+                _buildCustomAppBar(),
+
+                // Search Bar
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search conversations...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white24,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.message_rounded,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text(
-                                      'Messages',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      'Your Conversations',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 14,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
                 ),
 
-                // Messages List
+                // Chat List
                 Expanded(
-                  child: ListView.builder(
-                    physics: const BouncingScrollPhysics(),
+                  child: ListView(
                     padding: const EdgeInsets.all(16),
-                    itemCount: _dummyMessages.length,
-                    itemBuilder: (context, index) {
-                      final message = _dummyMessages[index];
-                      return _MessageTile(
-                        sender: message['sender']!,
-                        message: message['message']!,
-                        time: message['time']!,
-                      );
-                    },
+                    children: [
+                      _buildChatTile(
+                        context: context,
+                        name: 'John Contractor',
+                        lastMessage: 'Can we discuss the project details?',
+                        time: '10:30',
+                      ),
+                      const SizedBox(height: 8),
+                      _buildChatTile(
+                        context: context,
+                        name: 'Sarah Architect',
+                        lastMessage: 'I\'ve uploaded the new blueprints.',
+                        time: 'Yesterday',
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -139,100 +568,121 @@ class MessagesDashboard extends StatelessWidget {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        backgroundColor: const Color(0xFFFF9800),
+        child: const Icon(Icons.message),
+      ),
     );
   }
 
-  // Dummy messages data with more variety
-  static final List<Map<String, String>> _dummyMessages = [
-    {
-      'sender': 'Alex Rodriguez',
-      'message': 'Can we schedule a product demo?',
-      'time': '3:45 PM'
-    },
-    {
-      'sender': 'Emma Thompson',
-      'message': 'Attached are the quarterly reports.',
-      'time': '2:30 PM'
-    },
-    {
-      'sender': 'Carlos Martinez',
-      'message': 'Requesting feedback on the new design proposal.',
-      'time': '1:15 PM'
-    },
-    {
-      'sender': 'Sarah Kim',
-      'message': 'Confirmed hotel bookings for the conference.',
-      'time': '12:00 PM'
-    },
-    {
-      'sender': 'Michael Chen',
-      'message': 'Team lunch this Friday - venue suggestions?',
-      'time': 'Yesterday'
-    },
-    {
-      'sender': 'Lisa Wong',
-      'message': 'Quick question about the marketing strategy.',
-      'time': '11:30 AM'
-    },
-    {
-      'sender': 'Robert Johnson',
-      'message': 'Invoice for last month has been processed.',
-      'time': '10:45 AM'
-    },
-  ];
-}
-
-class _MessageTile extends StatelessWidget {
-  final String sender;
-  final String message;
-  final String time;
-
-  const _MessageTile({
-    required this.sender,
-    required this.message,
-    required this.time,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildCustomAppBar() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFF9800), Color(0xFFFF5722)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.message_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Messages',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Your Conversations',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatTile({
+    required BuildContext context,
+    required String name,
+    required String lastMessage,
+    required String time,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF9800).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(15),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(userName: name),
           ),
-          child: Icon(
-            Icons.person_rounded,
-            color: const Color(0xFFFF9800),
-            size: 24,
+        ),
+        leading: CircleAvatar(
+          backgroundColor: const Color(0xFFFF9800).withOpacity(0.1),
+          child: Text(
+            name[0].toUpperCase(),
+            style: const TextStyle(
+              color: Color(0xFFFF9800),
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         title: Text(
-          sender,
+          name,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            color: Color(0xFFFF5722),
           ),
         ),
         subtitle: Text(
-          message,
-          maxLines: 2,
+          lastMessage,
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: Colors.grey[600],
@@ -249,4 +699,173 @@ class _MessageTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class ChatScreen extends StatefulWidget {
+  final String userName;
+
+  const ChatScreen({Key? key, required this.userName}) : super(key: key);
+
+  @override
+  _ChatScreenState createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _messageController = TextEditingController();
+  final List<ChatMessage> _messages = [
+    ChatMessage(
+      text: 'Hi there! Can we discuss the project details?',
+      isMe: false,
+      sender: 'John Contractor',
+    ),
+  ];
+
+  void _sendMessage() {
+    if (_messageController.text.trim().isNotEmpty) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: _messageController.text.trim(),
+          isMe: true,
+          sender: 'You',
+        ));
+
+        _messageController.clear();
+      });
+
+      // Add a delay of 5 seconds before adding the dummy response
+      Future.delayed(const Duration(seconds: 5), () {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: 'Sounds good, let\'s schedule a meeting soon.',
+            isMe: false,
+            sender: widget.userName,
+          ));
+        });
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F6FA),
+      appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFF9800), Color(0xFFFF5722)],
+            ),
+          ),
+        ),
+        title: Text(widget.userName),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              reverse: true,
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final message = _messages[_messages.length - 1 - index];
+                return _buildMessageBubble(message);
+              },
+            ),
+          ),
+          _buildMessageInput(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble(ChatMessage message) {
+    return Align(
+      alignment: message.isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: message.isMe
+              ? const Color(0xFFFF9800).withOpacity(0.2)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.7,
+        ),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            color: message.isMe ? Colors.black : Colors.black87,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageInput() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              decoration: InputDecoration(
+                hintText: 'Type a message...',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => _sendMessage(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF9800),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.send, color: Colors.white),
+              onPressed: _sendMessage,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ChatMessage {
+  final String text;
+  final bool isMe;
+  final String sender;
+
+  ChatMessage({
+    required this.text,
+    required this.isMe,
+    required this.sender,
+  });
 }
