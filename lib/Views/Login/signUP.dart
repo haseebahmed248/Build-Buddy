@@ -1,4 +1,4 @@
-import 'package:buildbuddy/Views/shared/widgets/custom_button.dart';
+import 'package:buildbuddy/Views/Shared/widgets/custom_button.dart';
 import 'package:buildbuddy/Views/Login/loginPage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -6,6 +6,7 @@ import '../../Controllers/authControllers.dart';
 import '../../Models/userModels.dart';
 import '../Shared/widgets/auth_success_animation.dart';
 import '../Shared/widgets/input_field.dart';
+
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -30,7 +31,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     print("SignUpScreen received arguments: ${Get.arguments}");
     if (Get.arguments != null && Get.arguments is String) {
       selectedRole = UserRole.values.firstWhere(
-            (e) => e.name == Get.arguments,
+        (e) => e.name == Get.arguments,
         orElse: () => UserRole.admin,
       );
     } else {
@@ -39,8 +40,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     print("Selected Role: $selectedRole");
   }
 
-
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -48,7 +47,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _confirmPasswordController.dispose();
     super.dispose();
   }
-
 
   void _handleSignUp() async {
     if (_formKey.currentState?.validate() ?? false) {
@@ -78,7 +76,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           builder: (context) => AuthSuccessAnimation(
             onAnimationComplete: () {
               Navigator.pop(context); // Close the dialog
-             // _authController.goToHome(); // Navigate to home
+              // _authController.goToHome(); // Navigate to home
             },
           ),
         );
@@ -87,7 +85,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   // color scheme
-  static const Color darkBlue = Color(0xFF1A1A60);     // Deeper blue for large circles
+  static const Color darkBlue =
+      Color(0xFF1A1A60); // Deeper blue for large circles
   static const Color secondaryGrey = Color(0xFF757575); // Secondary text color
 
   @override
@@ -166,7 +165,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: MediaQuery.of(context).size.height * 0.16),
+                      SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.16),
                       const Text(
                         'Sign Up',
                         style: TextStyle(
@@ -195,7 +195,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
                           }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                              .hasMatch(value)) {
                             return 'Please enter a valid email';
                           }
                           return null;
@@ -208,8 +209,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         prefixIcon: Icons.lock_outline,
                         obscureText: _obscurePassword,
                         suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
                         ),
                         validator: PasswordValidator.validatePassword,
                       ),
@@ -220,8 +224,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         prefixIcon: Icons.lock_outline,
                         obscureText: _obscureConfirmPassword,
                         suffixIcon: IconButton(
-                          icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                          icon: Icon(_obscureConfirmPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off),
+                          onPressed: () => setState(() =>
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -244,7 +252,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         child: TextButton(
                           onPressed: () => Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const SignInScreen()),
+                            MaterialPageRoute(
+                                builder: (_) => const SignInScreen()),
                           ),
                           child: const Text(
                             'You already have an account? Sign in',
@@ -256,7 +265,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(height: MediaQuery.of(context).size.height * 0.1),
+                      SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.1),
                     ],
                   ),
                 ),
@@ -268,36 +278,3 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
