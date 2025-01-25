@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "872955660342",
+    "project_id": "buildbuddy-9375d",
+    "storage_bucket": "buildbuddy-9375d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:872955660342:android:7761617885181e73e03097",
+        "android_client_info": {
+          "package_name": "buildbuddy.example.buildbuddy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "872955660342-rgid0e53rgmubo0jgvnef6pfn6re2g83.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "buildbuddy.example.buildbuddy",
+            "certificate_hash": "51640dcca73cddfdab1621e8bb89dcdca66805c7"
+          }
+        },
+        {
+          "client_id": "872955660342-gmdpuqpsh330h8hlj11uain634v16jah.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBww5oiDNCT0TZ8UkANfOXpHsXkDBYZ63A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "872955660342-gmdpuqpsh330h8hlj11uain634v16jah.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
