@@ -1,5 +1,5 @@
-import 'package:buildbuddyfyp/Views/shared/widgets/custom_button.dart';
-import 'package:buildbuddyfyp/Views/Login/loginPage.dart';
+import 'package:buildbuddy/Views/shared/widgets/custom_button.dart';
+import 'package:buildbuddy/Views/Login/loginPage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../Controllers/authControllers.dart';

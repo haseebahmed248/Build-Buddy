@@ -1,6 +1,3 @@
-// lib/models/user_models.dart
-
-
 enum UserRole {
   homeowner,
   contractor,

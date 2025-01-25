@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:buildbuddyfyp/Controllers/authControllers.dart';
+import 'package:buildbuddy/Controllers/authControllers.dart';
 import 'package:get/get_core/src/get_main.dart';
 
 class ArchitectDashboard extends StatelessWidget {

@@ -1,8 +1,8 @@
 ///////
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:buildbuddyfyp/Views/Login/signUP.dart';
-import 'package:buildbuddyfyp/Views/Login/loginPage.dart';
+import 'package:buildbuddy/Views/Login/signUP.dart';
+import 'package:buildbuddy/Views/Login/loginPage.dart';
 import 'package:get/get.dart';
 
 class GetStartedScreen extends StatelessWidget {

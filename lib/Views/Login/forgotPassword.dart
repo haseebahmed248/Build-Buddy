@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../Shared/widgets/custom_button.dart';
 import '../Shared/widgets/input_field.dart';
-import 'package:buildbuddyfyp/Views/Login/loginPage.dart';
+import 'package:buildbuddy/Views/Login/loginPage.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});

@@ -2,8 +2,11 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:buildbuddyfyp/Models/projectModel.dart';
-import 'package:buildbuddyfyp/Services/projects/projectService.dart';
+import 'package:buildbuddy/Models/projectModel.dart';
+import 'package:buildbuddy/Services/projects/projectService.dart';
+
+import '../Models/projectModel.dart';
+import '../Services/projects/projectService.dart';
 
 class ProjectController extends ChangeNotifier {
   final ProjectService _projectService = ProjectService();

@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:buildbuddyfyp/Controllers/authControllers.dart';
+import 'package:buildbuddy/Controllers/authControllers.dart';
 
 import '../Shared/widgets/appBarColor.dart';
 

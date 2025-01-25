@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/HomeOwner.dart';
-import 'package:buildbuddyfyp/Views/Login/signUp.dart';
-import 'package:buildbuddyfyp/Views/Login/forgotPassword.dart';
+import 'package:buildbuddy/Views/DashBoard/HomeOwner.dart';
+import 'package:buildbuddy/Views/Login/signUp.dart';
+import 'package:buildbuddy/Views/Login/forgotPassword.dart';
 import 'package:get/get.dart';
 import '../../Models/userModels.dart';
 import '../Shared/widgets/custom_button.dart';
 import '../Shared/widgets/input_field.dart';
 import '../../Controllers/authControllers.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/Architect.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/Vendor.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/Admin.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/Constructor.dart';
-import 'package:buildbuddyfyp/Views/Shared/widgets/auth_success_animation.dart';
+import 'package:buildbuddy/Views/DashBoard/Architect.dart';
+import 'package:buildbuddy/Views/DashBoard/Vendor.dart';
+import 'package:buildbuddy/Views/DashBoard/Admin.dart';
+import 'package:buildbuddy/Views/DashBoard/Constructor.dart';
+import 'package:buildbuddy/Views/Shared/widgets/auth_success_animation.dart';
 
 // Password Validator class
 class PasswordValidator {

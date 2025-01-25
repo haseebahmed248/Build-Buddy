@@ -831,10 +831,10 @@ class _ProjectCreationScreenState extends State<ProjectCreationScreen> {
 
 
 ////////////
-import 'package:buildbuddyfyp/Controllers/projectController.dart';
-import 'package:buildbuddyfyp/Models/projectModel.dart';
+import 'package:buildbuddy/Controllers/projectController.dart';
+import 'package:buildbuddy/Models/projectModel.dart';
 
-import 'package:buildbuddyfyp/Views/DashBoard/HomeOwner/projectListItem.dart';
+import 'package:buildbuddy/Views/DashBoard/HomeOwner/projectListItem.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

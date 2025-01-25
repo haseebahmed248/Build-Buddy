@@ -42,7 +42,6 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
     }
     return null;
   }
-
   Future<bool> _isAdminCodeValid(String enteredCode) async {
     try {
       final DatabaseReference ref = FirebaseDatabase.instance.ref('admin_code');
@@ -59,6 +58,23 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
       return false;
     }
   }
+
+  /*Future<bool> _isAdminCodeValid(String enteredCode) async {
+    try {
+      final DatabaseReference ref = FirebaseDatabase.instance.ref('admin_code');
+      final DataSnapshot snapshot = await ref.get();
+
+      if (snapshot.exists) {
+        String storedCode = snapshot.value.toString().trim();
+        String enteredTrimmedCode = enteredCode.trim();
+        return storedCode == enteredTrimmedCode;
+      }
+      return false;
+    } catch (error) {
+      print("Error validating admin code: $error");
+      return false;
+    }
+  }*/
 
   void _handleSignIn() async {
     if (!_formKey.currentState!.validate()) return;

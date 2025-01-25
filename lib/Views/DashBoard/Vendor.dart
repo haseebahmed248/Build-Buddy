@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:buildbuddyfyp/Controllers/authControllers.dart';
+import 'package:buildbuddy/Controllers/authControllers.dart';
 
 class VendorDashboard extends StatelessWidget {
   final AuthController _authController = Get.find<AuthController>();

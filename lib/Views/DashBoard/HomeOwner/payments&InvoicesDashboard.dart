@@ -1,9 +1,10 @@
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/HomeOwner/payment_detail.dart';
+import 'package:buildbuddy/Views/DashBoard/HomeOwner/payment_detail.dart';
 
 class PaymentsDashboard extends StatefulWidget {
-  const PaymentsDashboard({Key? key}) : super(key: key);
+  const PaymentsDashboard({super.key});
 
   @override
   _PaymentsDashboardState createState() => _PaymentsDashboardState();

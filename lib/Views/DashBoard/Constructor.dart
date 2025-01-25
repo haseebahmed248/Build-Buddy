@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:buildbuddyfyp/Views/Login/startedScreen.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/Contractor/ManageProjects.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/Contractor/MaterialOrders.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/Contractor/Messages.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/Contractor/Payments.dart';
-import 'package:buildbuddyfyp/Views/DashBoard/Contractor/RatingAndReviews.dart';
-import 'package:buildbuddyfyp/Controllers/authControllers.dart';
+import 'package:buildbuddy/Views/Login/startedScreen.dart';
+import 'package:buildbuddy/Views/DashBoard/Contractor/ManageProjects.dart';
+import 'package:buildbuddy/Views/DashBoard/Contractor/MaterialOrders.dart';
+import 'package:buildbuddy/Views/DashBoard/Contractor/Messages.dart';
+import 'package:buildbuddy/Views/DashBoard/Contractor/Payments.dart';
+import 'package:buildbuddy/Views/DashBoard/Contractor/RatingAndReviews.dart';
+import 'package:buildbuddy/Controllers/authControllers.dart';
 
 class ContractorDashboard extends StatefulWidget {
   const ContractorDashboard({super.key});

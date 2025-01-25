@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:buildbuddyfyp/views/DashBoard/stakeHolderSelection.dart';
+import 'package:buildbuddy/views/DashBoard/stakeHolderSelection.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);

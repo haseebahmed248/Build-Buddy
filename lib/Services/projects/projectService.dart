@@ -1,5 +1,7 @@
 import 'package:firebase_database/firebase_database.dart';
-import 'package:buildbuddyfyp/Models/projectModel.dart';
+import 'package:buildbuddy/Models/projectModel.dart';
+
+import '../../Models/projectModel.dart';
 
 class ProjectService {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();

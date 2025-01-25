@@ -267,8 +267,8 @@ extension UserRoleExtension on UserRole {
 /////////
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
-import 'package:buildbuddyfyp/Services/auth/authService.dart';
-import 'package:buildbuddyfyp/Models/userModels.dart';
+import 'package:buildbuddy/Services/auth/authService.dart';
+import 'package:buildbuddy/Models/userModels.dart';
 import 'package:flutter/material.dart';
 import '../Views/DashBoard/Admin.dart';
 import '../Views/DashBoard/Architect.dart';

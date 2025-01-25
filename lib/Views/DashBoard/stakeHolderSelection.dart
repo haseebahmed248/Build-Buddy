@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:buildbuddyfyp/Models/userModels.dart';
-import 'package:buildbuddyfyp/Views/Login/startedScreen.dart';
+import 'package:buildbuddy/Models/userModels.dart';
+import 'package:buildbuddy/Views/Login/startedScreen.dart';
 import 'package:get/get.dart';
 import 'package:firebase_database/firebase_database.dart';
 
