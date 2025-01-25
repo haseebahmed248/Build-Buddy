@@ -1,6 +1,6 @@
-# buildbuddy
+# buildbuddyfyp
 
-A new Flutter project.
+Final Year Project
 
 ## Getting Started
 

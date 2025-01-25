@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "buildbuddy.example" "\0"
-            VALUE "FileDescription", "buildbuddy" "\0"
+            VALUE "CompanyName", "com.FastNuces" "\0"
+            VALUE "FileDescription", "buildbuddyfyp" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "buildbuddy" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 buildbuddy.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "buildbuddy.exe" "\0"
-            VALUE "ProductName", "buildbuddy" "\0"
+            VALUE "InternalName", "buildbuddyfyp" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2024 com.FastNuces. All rights reserved." "\0"
+            VALUE "OriginalFilename", "buildbuddyfyp.exe" "\0"
+            VALUE "ProductName", "buildbuddyfyp" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

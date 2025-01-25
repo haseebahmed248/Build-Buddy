@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "731543850021",
+    "project_id": "buildbuddy2025",
+    "storage_bucket": "buildbuddy2025.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:731543850021:android:b4768fc7bd23ef48b683cc",
+        "android_client_info": {
+          "package_name": "com.FastNuces.buildbuddyfyp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "731543850021-aqheqarmqjh6t1eoqc3k8np2h3q4u2rj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.FastNuces.buildbuddyfyp",
+            "certificate_hash": "272b067839c9285d4a4f58e8500b68f2db5d01da"
+          }
+        },
+        {
+          "client_id": "731543850021-mtjoe4n2sj17qtmuh1qjh95a6pghr1nh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1TEQ9NLHH-qqSWvyqFhffzklQT755hLM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "731543850021-mtjoe4n2sj17qtmuh1qjh95a6pghr1nh.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

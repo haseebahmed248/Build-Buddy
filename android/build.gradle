@@ -1,4 +1,27 @@
+// Top-level build.gradle file
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath 'com.google.gms:google-services:4.4.2'
+    }
+}
+
 allprojects {
+
+    tasks.withType(JavaCompile) {
+        options.fork = true
+        allprojects {
+            tasks.withType(JavaCompile) {
+                options.fork = true
+                options.forkOptions.javaHome = file('/usr/lib/jvm/java-17-openjdk-amd64')
+            }
+        }
+
+    }
     repositories {
         google()
         mavenCentral()
