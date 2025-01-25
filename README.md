@@ -1,16 +1,109 @@
-# buildbuddy
+# Build Buddy - Streamlining the Home Construction Process
 
-A new Flutter project.
+Build Buddy is a comprehensive mobile application designed to revolutionize the home construction industry by connecting homeowners, contractors, architects, and vendors in a seamless digital ecosystem.
 
-## Getting Started
+## 🏗️ Overview
 
-This project is a starting point for a Flutter application.
+Build Buddy simplifies the complex process of home construction by providing an integrated platform for project management, contractor selection, vendor coordination, and real-time communication between all stakeholders.
 
-A few resources to get you started if this is your first Flutter project:
+## ✨ Key Features
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Project Management Dashboard**
+  - Track construction progress in real-time
+  - Milestone tracking and timeline management
+  - Resource allocation and scheduling
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Contractor Management**
+  - Search and select contractors based on ratings and location
+  - View contractor portfolios and previous work
+  - Real-time contractor availability status
+
+- **Vendor Integration**
+  - Real-time material pricing and availability
+  - Direct material ordering system
+  - Delivery tracking and management
+
+- **Architect Collaboration**
+  - Design submission and review system
+  - Real-time feedback and communication
+  - Version control for design iterations
+
+- **Communication Hub**
+  - Secure in-app messaging
+  - Real-time notifications
+  - Document sharing capabilities
+
+- **Payment and Invoicing**
+  - Secure payment processing
+  - Automated invoice generation
+  - Payment milestone tracking
+
+## 🛠️ Technical Stack
+
+- **Frontend**: Flutter
+- **Backend**: Firebase
+- **Authentication**: Firebase Auth
+- **Database**: Cloud Firestore
+- **Storage**: Firebase Storage
+- **APIs**: RESTful architecture
+
+## 🔒 Security Features
+
+- End-to-end encryption for communication
+- Secure payment processing
+- Role-based access control
+- Data encryption at rest and in transit
+
+## 📱 Platform Support
+
+- Android
+
+## ⚙️ System Requirements
+
+### Mobile App
+- Android 6.0 or later
+- 100MB free storage space
+- Active internet connection
+
+### Development Requirements
+- Flutter SDK
+- Firebase CLI
+- Android Studio / Vscode
+- Git
+
+## 🚀 Getting Started
+
+1. Clone the repository:
+```bash
+git clone https://github.com/haseebahmed248/build-buddy.git
+```
+
+2. Install dependencies:
+```bash
+cd build-buddy
+flutter pub get
+```
+
+3. Configure Firebase:
+   - Create a new Firebase project
+   - Add your `google-services.json` for Android
+
+4. Run the application:
+```bash
+flutter run
+```
+
+## 📊 Architecture
+
+The application follows a clean architecture pattern with:
+- Domain-driven design
+- MVVM architecture
+- Repository pattern
+- Dependency injection
+
+
+## 📧 Contact
+
+Project Link: [https://github.com/yourusername/build-buddy](https://github.com/yourusername/build-buddy)
+
+---
