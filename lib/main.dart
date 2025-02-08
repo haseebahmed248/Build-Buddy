@@ -4,6 +4,9 @@ import 'package:buildbuddy/Core/Theme/theme.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import 'package:buildbuddy/Controllers/authControllers.dart';
+import 'package:provider/provider.dart';
+
+import 'Controllers/projectController.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,7 +15,16 @@ void main() async {
   // Initialize AuthController using GetX
   Get.put(AuthController());
 
-  runApp(const MyApp());
+  //runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ProjectController('homeowner')),
+        // Add other providers here
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

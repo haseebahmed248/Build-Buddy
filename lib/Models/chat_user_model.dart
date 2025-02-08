@@ -1,48 +1,31 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 
-// chat_user_model.dart
 class ChatUser {
-  final String id;
-  final String displayName;
+  final String uid;
+  final String name;
   final String role;
-  final String? photoURL;
-  final String email;
-  final bool isOnline;
-  final DateTime? lastSeen;
 
   ChatUser({
-    required this.id,
-    required this.displayName,
+    required this.uid,
+    required this.name,
     required this.role,
-    this.photoURL,
-    required this.email,
-    this.isOnline = false,
-    this.lastSeen,
   });
 
-  factory ChatUser.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  // Convert a JSON map into a ChatUser object
+  factory ChatUser.fromJson(Map<String, dynamic> json) {
     return ChatUser(
-      id: doc.id,
-      displayName: data['displayName'] ?? '',
-      role: data['role'] ?? '',
-      photoURL: data['photoURL'],
-      email: data['email'] ?? '',
-      isOnline: data['isOnline'] ?? false,
-      lastSeen: data['lastSeen'] != null
-          ? (data['lastSeen'] as Timestamp).toDate()
-          : null,
+      uid: json['uid'] ?? '',
+      name: json['name'] ?? '',
+      role: json['role'] ?? '',
     );
   }
 
+  // Convert a ChatUser object into a map to be saved to Firebase Realtime Database
   Map<String, dynamic> toMap() {
     return {
-      'displayName': displayName,
+      'uid': uid,
+      'name': name,
       'role': role,
-      'photoURL': photoURL,
-      'email': email,
-      'isOnline': isOnline,
-      'lastSeen': lastSeen != null ? Timestamp.fromDate(lastSeen!) : null,
     };
   }
 }

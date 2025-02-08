@@ -1,3 +1,59 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_database/firebase_database.dart' as db;
+
+class ChatController with ChangeNotifier {
+  final FirebaseDatabase _db = FirebaseDatabase.instance;
+  late DatabaseReference _chatRef;
+  final String currentUserId;
+  List<Map<String, dynamic>> _messages = [];
+
+  ChatController(this.currentUserId, String chatId) {
+    _chatRef = _db.ref().child('chatRooms').child(chatId).child('messages');
+  }
+
+  List<Map<String, dynamic>> get messages => _messages;
+
+  // Fetch chat messages from Firebase Realtime Database
+  Future<void> loadMessages() async {
+    final snapshot = await _chatRef.get(); // Use get() instead of once()
+    if (snapshot.exists) {
+      final messagesMap = snapshot.value as Map;
+      _messages = messagesMap.entries.map((entry) {
+        return Map<String, dynamic>.from(entry.value);
+      }).toList();
+      notifyListeners();  // Notify the UI to rebuild
+    }
+  }
+
+  // Send a message to the chat room
+  Future<void> sendMessage(String message) async {
+    if (message.isEmpty) return;
+
+    final newMessage = {
+      'senderId': currentUserId,
+      'message': message,
+      'timestamp': db.ServerValue.timestamp,  // Use Firebase's server timestamp
+    };
+
+    await _chatRef.push().set(newMessage);
+    loadMessages();  // Refresh messages after sending
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // // chat_controller.dart
 // import 'package:get/get.dart';
 // import 'package:firebase_auth/firebase_auth.dart';

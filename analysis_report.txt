@@ -1,0 +1,218 @@
+
+┌─────────────────────────────────────────────────────────┐
+│ A new version of Flutter is available!                  │
+│                                                         │
+│ To update to the latest version, run "flutter upgrade". │
+└─────────────────────────────────────────────────────────┘
+Analyzing buildbuddy...                                         
+
+warning - The include file 'package:flutter_lints/flutter.yaml' in 'D:\Flutter Projects\buildbuddy\analysis_options.yaml' can't be found when analyzing 'D:\Flutter Projects\buildbuddy' - analysis_options.yaml:10:10 - include_file_not_found
+warning - The operand can't be 'null', so the condition is always 'true' - lib\Controllers\authControllers.dart:488:21 - unnecessary_null_comparison
+warning - Unused import: 'package:firebase_database/firebase_database.dart' - lib\Models\chat_message_model.dart:1:8 - unused_import
+warning - Unused import: 'package:firebase_database/firebase_database.dart' - lib\Models\chat_room_model.dart:1:8 - unused_import
+warning - Unused import: 'package:firebase_database/firebase_database.dart' - lib\Models\chat_user_model.dart:1:8 - unused_import
+warning - The declaration '_mapStringToIcon' isn't referenced - lib\Models\projectModel.dart:28:19 - unused_element
+warning - Unused import: 'package:flutter/cupertino.dart' - lib\Routes\app_routes.dart:2:8 - unused_import
+warning - Unused import: '../Views/DashBoard/Admin.dart' - lib\Routes\app_routes.dart:19:8 - unused_import
+warning - Duplicate import - lib\Routes\app_routes.dart:61:8 - duplicate_import
+warning - Unused import: '../Views/DashBoard/Admin.dart' - lib\Routes\app_routes.dart:61:8 - unused_import
+warning - The value of the local variable 'userId' isn't used - lib\Routes\app_routes.dart:117:15 - unused_local_variable
+warning - Unused import: 'package:flutter/material.dart' - lib\Services\auth\authService.dart:3:8 - unused_import
+warning - Duplicate import - lib\Services\auth\authService.dart:10:8 - duplicate_import
+warning - Unused import: 'package:provider/provider.dart' - lib\Services\chat\chat_screen.dart:2:8 - unused_import
+warning - Unused import: 'package:buildbuddy/Controllers/chat_controller.dart' - lib\Services\chat\chat_screen.dart:4:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Chat\MessagesDashboard.dart:26:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Chat\MessagesDashboard.dart:38:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Chat\MessagesDashboard.dart:171:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Chat\MessagesDashboard.dart:185:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Admin.dart:81:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Admin.dart:219:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Admin.dart:245:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Admin.dart:263:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Admin.dart:305:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Admin.dart:423:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Admin.dart:435:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Admin.dart:447:32 - deprecated_member_use
+warning - Unused import: 'package:buildbuddy/Views/DashBoard/Architect/ViewProjectPlans.dart' - lib\Views\DashBoard\Architect.dart:5:8 - unused_import
+warning - Unused import: 'package:buildbuddy/Views/DashBoard/Architect/ConsultWithHomeowners.dart' - lib\Views\DashBoard\Architect.dart:6:8 - unused_import
+warning - Unused import: 'package:buildbuddy/Views/DashBoard/Architect/ReviewContractorTasks.dart' - lib\Views\DashBoard\Architect.dart:7:8 - unused_import
+warning - Unused import: 'package:buildbuddy/Views/DashBoard/Architect/messages.dart' - lib\Views\DashBoard\Architect.dart:8:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect.dart:83:39 - deprecated_member_use
+warning - The receiver can't be 'null' because of short-circuiting, so the null-aware operator '?[' can't be used - lib\Views\DashBoard\Architect.dart:179:51 - invalid_null_aware_operator
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect.dart:231:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect.dart:257:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect.dart:275:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect.dart:318:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect.dart:395:26 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect.dart:427:38 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect.dart:453:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect.dart:639:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect.dart:651:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:215:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:227:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:247:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:267:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:332:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:399:59 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:440:24 - deprecated_member_use
+warning - The value of the field '_selectedDate' isn't used - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:485:13 - unused_field
+warning - The value of the field '_selectedTime' isn't used - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:486:14 - unused_field
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:658:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:670:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ConsultWithHomeowners.dart:769:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ReviewContractorTasks.dart:182:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ReviewContractorTasks.dart:201:36 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ViewProjectPlans.dart:219:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ViewProjectPlans.dart:231:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ViewProjectPlans.dart:251:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ViewProjectPlans.dart:270:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ViewProjectPlans.dart:334:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ViewProjectPlans.dart:385:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\ViewProjectPlans.dart:425:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\messages.dart:144:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\messages.dart:156:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Architect\messages.dart:192:35 - deprecated_member_use
+warning - Unused import: 'package:buildbuddy/Views/Login/startedScreen.dart' - lib\Views\DashBoard\Constructor.dart:4:8 - unused_import
+warning - The declaration '_handleSignOut' isn't referenced - lib\Views\DashBoard\Constructor.dart:44:16 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:85:39 - deprecated_member_use
+warning - The receiver can't be 'null' because of short-circuiting, so the null-aware operator '?[' can't be used - lib\Views\DashBoard\Constructor.dart:183:53 - invalid_null_aware_operator
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:233:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:262:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:280:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:322:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:519:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:538:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:651:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:678:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:708:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:752:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Constructor.dart:800:50 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\Payments.dart:238:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\Payments.dart:250:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\Payments.dart:272:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\Payments.dart:285:73 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\Payments.dart:354:77 - deprecated_member_use
+warning - Unused import: 'package:intl/intl.dart' - lib\Views\DashBoard\Contractor\manageProjects.dart:2:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\manageProjects.dart:238:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\manageProjects.dart:250:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\manageProjects.dart:272:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\manageProjects.dart:285:73 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\manageProjects.dart:353:77 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\materialOrders.dart:238:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\materialOrders.dart:250:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\materialOrders.dart:272:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\materialOrders.dart:285:71 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Contractor\materialOrders.dart:353:75 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner.dart:81:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner.dart:219:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner.dart:245:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner.dart:263:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner.dart:306:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner.dart:424:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner.dart:436:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner.dart:448:32 - deprecated_member_use
+warning - The value of the local variable 'url' isn't used - lib\Views\DashBoard\HomeOwner\Help&SupportDashboard.dart:37:13 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\Help&SupportDashboard.dart:86:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\Help&SupportDashboard.dart:98:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\Help&SupportDashboard.dart:417:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\Help&SupportDashboard.dart:428:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\Help&SupportDashboard.dart:469:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\Help&SupportDashboard.dart:480:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\Rate&ReviewDashboard.dart:65:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\Rate&ReviewDashboard.dart:77:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\Rate&ReviewDashboard.dart:180:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\Rate&ReviewDashboard.dart:197:70 - deprecated_member_use
+warning - The value of the field '_currentPosition' isn't used - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:22:13 - unused_field
+warning - The value of the field '_searchController' isn't used - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:25:25 - unused_field
+warning - The declaration '_searchLocation' isn't referenced - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:105:8 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:222:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:234:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:340:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:352:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:383:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:431:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:444:63 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\findProfessionals.dart:486:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\messages.dart:505:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\messages.dart:517:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\messages.dart:653:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\messages.dart:667:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\messages.dart:795:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\messages.dart:800:35 - deprecated_member_use
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\Views\DashBoard\HomeOwner\payment_detail.dart:2:8 - unnecessary_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\payment_detail.dart:40:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\payment_detail.dart:52:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\payment_detail.dart:152:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\payment_detail.dart:173:81 - deprecated_member_use
+warning - Unused import: 'package:intl/intl.dart' - lib\Views\DashBoard\HomeOwner\payments&InvoicesDashboard.dart:2:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\payments&InvoicesDashboard.dart:275:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\payments&InvoicesDashboard.dart:287:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\payments&InvoicesDashboard.dart:325:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\payments&InvoicesDashboard.dart:338:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\payments&InvoicesDashboard.dart:380:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\settings.dart:110:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\settings.dart:122:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\settings.dart:204:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\HomeOwner\settings.dart:217:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor.dart:79:39 - deprecated_member_use
+warning - The receiver can't be 'null' because of short-circuiting, so the null-aware operator '?[' can't be used - lib\Views\DashBoard\Vendor.dart:175:51 - invalid_null_aware_operator
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor.dart:227:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor.dart:253:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor.dart:271:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor.dart:287:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor.dart:343:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor.dart:422:26 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor.dart:440:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor.dart:695:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor.dart:707:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\Ratings&ReviewsScreen.dart:166:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\Ratings&ReviewsScreen.dart:178:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\Ratings&ReviewsScreen.dart:200:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\Ratings&ReviewsScreen.dart:213:70 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\Ratings&ReviewsScreen.dart:265:74 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\analytics.dart:145:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\analytics.dart:157:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\analytics.dart:214:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\analytics.dart:227:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\analytics.dart:273:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\analytics.dart:348:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\analytics.dart:383:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\invoicesScreen.dart:121:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\invoicesScreen.dart:133:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\invoicesScreen.dart:155:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\invoicesScreen.dart:168:73 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\invoicesScreen.dart:219:77 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\manageProductsScreen.dart:213:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\manageProductsScreen.dart:225:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\manageProductsScreen.dart:247:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\manageProductsScreen.dart:260:73 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\manageProductsScreen.dart:310:77 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\messageScreen.dart:141:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\messageScreen.dart:153:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\messageScreen.dart:194:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\messageScreen.dart:209:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\notifications.dart:164:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\notifications.dart:176:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\notifications.dart:198:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\notifications.dart:211:78 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\notifications.dart:261:82 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\ordersScreen.dart:199:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\ordersScreen.dart:233:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\support.dart:128:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\support.dart:140:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\support.dart:162:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\DashBoard\Vendor\support.dart:173:52 - deprecated_member_use
+warning - Unused import: 'package:buildbuddy/Views/Login/startedScreen.dart' - lib\Views\DashBoard\stakeHolderSelection.dart:3:8 - unused_import
+warning - A value for optional parameter 'key' isn't ever given - lib\Views\DashBoard\stakeHolderSelection.dart:268:11 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Login\animationScreen.dart:90:43 - deprecated_member_use
+warning - Unused import: 'package:buildbuddy/Views/Login/loginPage.dart' - lib\Views\Login\forgotPassword.dart:5:8 - unused_import
+warning - This default clause is covered by the previous cases - lib\Views\Login\loginPage.dart:248:7 - unreachable_switch_default
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Login\welcomeScreen.dart:209:22 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Login\welcomeScreen.dart:359:31 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Login\welcomeScreen.dart:422:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Login\welcomeScreen.dart:439:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Login\welcomeScreen.dart:499:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Shared\widgets\custom_button.dart:39:50 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\Views\Shared\widgets\custom_button.dart:40:50 - deprecated_member_use
+warning - The dev dependency on flutter_launcher_icons is unnecessary because there is also a normal dependency on that package - pubspec.yaml:63:3 - unnecessary_dev_dependency
+

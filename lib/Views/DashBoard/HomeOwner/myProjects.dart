@@ -1,3 +1,4 @@
+/*
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Ensure you have this for date formatting
 
@@ -664,6 +665,9 @@ class _ProjectCreationScreenState extends State<ProjectCreationScreen> {
     );
   }
 }
+*/
+/////////////////
+
 
 /*
 class ProjectCreationScreen extends StatefulWidget {
@@ -982,19 +986,15 @@ class _ProjectCreationScreenState extends State<ProjectCreationScreen> {
 /*
 import 'package:buildbuddy/Controllers/projectController.dart';
 import 'package:buildbuddy/Models/projectModel.dart';
-
 import 'package:buildbuddy/Views/DashBoard/HomeOwner/projectListItem.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:provider/provider.dart';
-
-
 import 'package:firebase_auth/firebase_auth.dart';
-
-
 
 class MyProjectsDashboard extends StatefulWidget {
   final String userType;
-
   const MyProjectsDashboard({required this.userType, Key? key}) : super(key: key);
 
   @override
@@ -1002,60 +1002,47 @@ class MyProjectsDashboard extends StatefulWidget {
 }
 
 class _MyProjectsDashboardState extends State<MyProjectsDashboard> {
-  String? _selectedFilter;
-  late ProjectController _projectController;
-
   @override
   void initState() {
     super.initState();
-    _projectController = ProjectController(widget.userType);
-    _loadProjects();
-  }
-
-  Future<void> _loadProjects() async {
-    await _projectController.loadProjects();
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
+      Provider.of<ProjectController>(context, listen: false).loadProjects();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _projectController,
-      child: Scaffold(
-          appBar: PreferredSize(
-            preferredSize: Size.fromHeight(kToolbarHeight),
-            child: AppBar(
-              title: Text('My Projects'),
-            ),
-          ),
-        body: Consumer<ProjectController>(
-          builder: (context, controller, _) {
-            if (controller.isLoading) {
-              return Center(child: CircularProgressIndicator());
-            }
+   
 
-            return ListView.builder(
-              itemCount: controller.projects.length,
-              itemBuilder: (context, index) {
-                final project = controller.projects[index];
-                return ProjectListItem(
-                  project: project,
-                  onEdit: () => _navigateToEditProject(project),
-                  onDelete: () => _deleteProject(project.id),
-                );
-              },
-            );
-          },
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _navigateToCreateProject,
-          child: Icon(Icons.add),
-        ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('My Projects')),
+      body: Consumer<ProjectController>(
+
+        builder: (context, controller, _) {
+          if (controller.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return ListView.builder(
+            itemCount: controller.projects.length,
+            itemBuilder: (context, index) {
+              final project = controller.projects[index];
+              return ProjectListItem(
+                project: project,
+                onEdit: () => _navigateToEditProject(project),
+                onDelete: () => _deleteProject(project.id),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _navigateToCreateProject,
+        child: const Icon(Icons.add),
       ),
     );
   }
 
-  Future<void> _navigateToCreateProject() async
-  {
+  Future<void> _navigateToCreateProject() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -1070,9 +1057,10 @@ class _MyProjectsDashboardState extends State<MyProjectsDashboard> {
     );
 
     if (newProject != null) {
-      await _projectController.addProject(newProject);
+      await Provider.of<ProjectController>(context, listen: false).addProject(newProject);
     }
   }
+
   Future<void> _navigateToEditProject(Project project) async {
     final updatedProject = await Navigator.push<Project>(
       context,
@@ -1086,16 +1074,16 @@ class _MyProjectsDashboardState extends State<MyProjectsDashboard> {
     );
 
     if (updatedProject != null) {
-      await _projectController.updateProject(updatedProject);
+      await Provider.of<ProjectController>(context, listen: false).updateProject(updatedProject);
     }
   }
 
   Future<void> _deleteProject(String projectId) async {
-    await _projectController.deleteProject(projectId);
+    await Provider.of<ProjectController>(context, listen: false).deleteProject(projectId);
   }
 }
 
-// lib/screens/project_creation_screen.dart
+// ---------------------- PROJECT CREATION SCREEN ---------------------- //
 class ProjectCreationScreen extends StatefulWidget {
   final String userType;
   final String userId;
@@ -1129,31 +1117,26 @@ class _ProjectCreationScreenState extends State<ProjectCreationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(kToolbarHeight),
-        child: AppBar(
-          title: Text('My Projects'),
-        ),
-      ),
+      appBar: AppBar(title: Text(widget.projectToEdit != null ? 'Edit Project' : 'Create Project')),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             children: [
               TextFormField(
                 controller: _titleController,
-                decoration: InputDecoration(labelText: 'Project Title'),
+                decoration: const InputDecoration(labelText: 'Project Title'),
                 validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
-                decoration: InputDecoration(labelText: 'Description'),
+                decoration: const InputDecoration(labelText: 'Description'),
                 maxLines: 3,
                 validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               DropdownButtonFormField<ProjectStatus>(
                 value: _status,
                 items: ProjectStatus.values.map((status) {
@@ -1164,7 +1147,7 @@ class _ProjectCreationScreenState extends State<ProjectCreationScreen> {
                 }).toList(),
                 onChanged: (value) => setState(() => _status = value!),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _saveProject,
                 child: Text(widget.projectToEdit != null ? 'Update' : 'Create'),
@@ -1188,14 +1171,205 @@ class _ProjectCreationScreenState extends State<ProjectCreationScreen> {
       status: _status,
       progress: widget.projectToEdit?.progress ?? 0,
       date: DateTime.now().toIso8601String(),
-      icon: Icons.work,
+      icon: Icons.work, // ✅ Corrected for Firebase compatibility
     );
 
     Navigator.pop(context, project);
   }
 }
-
 */
+
+////////////
+import 'package:buildbuddy/Controllers/projectController.dart';
+import 'package:buildbuddy/Models/projectModel.dart';
+import 'package:buildbuddy/Views/DashBoard/HomeOwner/projectListItem.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+class MyProjectsDashboard extends StatefulWidget {
+  final String userType;
+  const MyProjectsDashboard({required this.userType, Key? key}) : super(key: key);
+
+  @override
+  _MyProjectsDashboardState createState() => _MyProjectsDashboardState();
+}
+
+class _MyProjectsDashboardState extends State<MyProjectsDashboard> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ProjectController>(context, listen: false).loadProjects();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('My Projects')),
+      body: Consumer<ProjectController>(
+        builder: (context, controller, _) {
+          if (controller.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return ListView.builder(
+            itemCount: controller.projects.length,
+            itemBuilder: (context, index) {
+              final project = controller.projects[index];
+              return ProjectListItem(
+                project: project,
+                onEdit: () => _navigateToEditProject(project),
+                onDelete: () => _deleteProject(project.id),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _navigateToCreateProject,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Future<void> _navigateToCreateProject() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final newProject = await Navigator.push<Project>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProjectCreationScreen(
+          userType: widget.userType,
+          userId: user.uid,
+        ),
+      ),
+    );
+
+    if (newProject != null) {
+      await Provider.of<ProjectController>(context, listen: false).addProject(newProject);
+    }
+  }
+
+  Future<void> _navigateToEditProject(Project project) async {
+    final updatedProject = await Navigator.push<Project>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProjectCreationScreen(
+          userType: widget.userType,
+          userId: project.userId,
+          projectToEdit: project,
+        ),
+      ),
+    );
+
+    if (updatedProject != null) {
+      await Provider.of<ProjectController>(context, listen: false).updateProject(updatedProject);
+    }
+  }
+
+  Future<void> _deleteProject(String projectId) async {
+    await Provider.of<ProjectController>(context, listen: false).deleteProject(projectId);
+  }
+}
+class ProjectCreationScreen extends StatefulWidget {
+  final String userType;
+  final String userId;
+  final Project? projectToEdit;
+
+  const ProjectCreationScreen({
+    required this.userType,
+    required this.userId,
+    this.projectToEdit,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  _ProjectCreationScreenState createState() => _ProjectCreationScreenState();
+}
+
+class _ProjectCreationScreenState extends State<ProjectCreationScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  late ProjectStatus _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.projectToEdit?.title);
+    _descriptionController = TextEditingController(text: widget.projectToEdit?.description);
+    _status = widget.projectToEdit?.status ?? ProjectStatus.inProgress;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.projectToEdit != null ? 'Edit Project' : 'Create Project')),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Project Title'),
+                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Description'),
+                maxLines: 3,
+                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<ProjectStatus>(
+                value: _status,
+                items: ProjectStatus.values.map((status) {
+                  return DropdownMenuItem(
+                    value: status,
+                    child: Text(status.toString().split('.').last),
+                  );
+                }).toList(),
+                onChanged: (value) => setState(() => _status = value!),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _saveProject,
+                child: Text(widget.projectToEdit != null ? 'Update' : 'Create'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveProject() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final project = Project(
+      id: widget.projectToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      title: _titleController.text,
+      description: _descriptionController.text,
+      userId: widget.userId,
+      userType: widget.userType,
+      status: _status,
+      progress: widget.projectToEdit?.progress ?? 0,
+      date: DateTime.now().toIso8601String(),
+      icon: 'work', // ✅ Save as a string
+    );
+
+    Navigator.pop(context, project);
+  }
+
+}
+
+
+
 
 
 

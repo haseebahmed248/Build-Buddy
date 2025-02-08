@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
 // Core App Screens
@@ -93,7 +94,23 @@ class AppRoutes {
         name: '/find-professionals',
         page: () => const FindProfessionalsDashboard()),
     GetPage(name: '/settings', page: () => const SettingsDashboard()),
-   /* GetPage(
+    /*GetPage(
+      name: '/my-projects',
+      page: () {
+        // Fetch the userId dynamically from Firebase Authentication
+        final userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
+
+        // Define userType based on some logic, for example, from Firestore or another source
+        final userType = "homeowner"; // Example, you can replace this with dynamic logic
+
+        // Pass the userId and userType to the route
+        Get.toNamed('/my-projects', arguments: {'userId': userId, 'userType': userType});
+        return Container(); // return an empty container (or handle differently)
+      },
+    ),*/
+
+
+    GetPage(
       name: '/my-projects',
       page: () {
         // Fetch the userId dynamically from Firebase Authentication
@@ -103,9 +120,9 @@ class AppRoutes {
           userType: '',
         );
       },
-    ),*/
+    ),
 
-    GetPage(name: '/my-projects', page: () => const MyProjectsDashboard()),
+    //GetPage(name: '/my-projects', page: () => const MyProjectsDashboard()),
     GetPage(name: '/messages', page: () => const MessagesDashboard()),
     GetPage(name: '/payments', page: () => const PaymentsDashboard()),
     GetPage(name: '/rate-review', page: () => const RateReviewDashboard()),

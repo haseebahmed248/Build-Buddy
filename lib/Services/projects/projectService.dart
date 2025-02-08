@@ -1,6 +1,73 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:buildbuddy/Models/projectModel.dart';
 
+class ProjectService {
+  final DatabaseReference _database = FirebaseDatabase.instance.ref();
+
+  // Create a new project
+  Future<void> createProject(Project project) async {
+    try {
+      await _database.child('projects').child(project.id).set(project.toJson());
+      await _database.child('userProjects').child(project.userId).child(project.id).set(true);
+    } catch (e) {
+      throw Exception('Failed to create project: $e');
+    }
+  }
+
+  // Fetch projects based on user role (Homeowner, Contractor, Architect)
+  Future<List<Project>> getProjects(String userId, String userType) async {
+    try {
+      final snapshot = await _database.child('projects').orderByChild('userId').equalTo(userId).get();
+      if (!snapshot.exists) return [];
+
+      List<Project> projects = [];
+      final data = Map<String, dynamic>.from(snapshot.value as Map);
+
+      data.forEach((key, value) {
+        if (value['userType'] == userType) {
+          projects.add(Project.fromJson(Map<String, dynamic>.from(value)));
+        }
+      });
+
+      return projects;
+    } catch (e) {
+      throw Exception('Failed to fetch projects: $e');
+    }
+  }
+
+  // Update an existing project
+  Future<void> updateProject(Project project) async {
+    try {
+      await _database.child('projects').child(project.id).update(project.toJson());
+    } catch (e) {
+      throw Exception('Failed to update project: $e');
+    }
+  }
+
+  // Delete a project
+  Future<void> deleteProject(String projectId, String userId) async {
+    try {
+      await _database.child('projects').child(projectId).remove();
+      await _database.child('userProjects').child(userId).child(projectId).remove();
+    } catch (e) {
+      throw Exception('Failed to delete project: $e');
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+/*
+import 'package:firebase_database/firebase_database.dart';
+import 'package:buildbuddy/Models/projectModel.dart';
+
 import '../../Models/projectModel.dart';
 
 class ProjectService {
@@ -68,3 +135,4 @@ class ProjectService {
     }
   }
 }
+*/

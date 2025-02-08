@@ -1,11 +1,9 @@
-// message_bubble.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class MessageBubble extends StatelessWidget {
   final String message;
   final bool isMe;
-  final Timestamp timestamp;
+  final DateTime timestamp;
   final bool read;
 
   const MessageBubble({
@@ -27,22 +25,14 @@ class MessageBubble extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment:
-            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Container(
             decoration: BoxDecoration(
               color: isMe ? Theme.of(context).primaryColor : Colors.grey[300],
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-                bottomLeft: isMe ? Radius.circular(12) : Radius.circular(0),
-                bottomRight: isMe ? Radius.circular(0) : Radius.circular(12),
-              ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            padding: EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 10,
-            ),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Text(
               message,
               style: TextStyle(
@@ -56,10 +46,7 @@ class MessageBubble extends StatelessWidget {
             children: [
               Text(
                 _formatTimestamp(timestamp),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               if (isMe) ...[
                 SizedBox(width: 4),
@@ -76,17 +63,16 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  String _formatTimestamp(Timestamp timestamp) {
+  String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
-    final date = timestamp.toDate();
-    final diff = now.difference(date);
+    final diff = now.difference(timestamp);
 
-    if (diff.inDays == 0) {
-      return '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-    } else if (diff.inDays == 1) {
-      return 'Yesterday';
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes} min ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours} hr ago';
     } else {
-      return '${date.day}/${date.month}/${date.year}';
+      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
     }
   }
 }

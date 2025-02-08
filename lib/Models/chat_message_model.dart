@@ -1,46 +1,31 @@
-// chat_message_model.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class ChatMessage {
-  final String id;
   final String senderId;
-  final String senderName;
   final String message;
-  final DateTime timestamp;
-  final bool isRead;
-  final String? attachmentUrl;
+  final String timestamp;
 
   ChatMessage({
-    required this.id,
     required this.senderId,
-    required this.senderName,
     required this.message,
     required this.timestamp,
-    this.isRead = false,
-    this.attachmentUrl,
   });
 
-  factory ChatMessage.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  // Convert a JSON map from Firebase Realtime Database into a ChatMessage object
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
-      id: doc.id,
-      senderId: data['senderId'] ?? '',
-      senderName: data['senderName'] ?? '',
-      message: data['message'] ?? '',
-      timestamp: (data['timestamp'] as Timestamp).toDate(),
-      isRead: data['isRead'] ?? false,
-      attachmentUrl: data['attachmentUrl'],
+      senderId: json['senderId'] ?? '',
+      message: json['message'] ?? '',
+      timestamp: json['timestamp'] ?? '',
     );
   }
 
+  // Convert a ChatMessage object into a map to be saved to Firebase Realtime Database
   Map<String, dynamic> toMap() {
     return {
       'senderId': senderId,
-      'senderName': senderName,
       'message': message,
-      'timestamp': Timestamp.fromDate(timestamp),
-      'isRead': isRead,
-      'attachmentUrl': attachmentUrl,
+      'timestamp': timestamp,
     };
   }
 }

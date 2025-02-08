@@ -1,16 +1,16 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 
-// chat_room_model.dart
 class ChatRoom {
   final String id;
   final List<String> participants;
   final List<String> participantNames;
   final List<String> participantRoles;
   final String lastMessage;
-  final DateTime lastMessageTime;
+  final String lastMessageTime;
   final String lastMessageSenderId;
-  final DateTime createdAt;
+  final String createdAt;
 
+  // Constructor with required named parameters
   ChatRoom({
     required this.id,
     required this.participants,
@@ -22,29 +22,31 @@ class ChatRoom {
     required this.createdAt,
   });
 
-  factory ChatRoom.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  // Convert a JSON map into a ChatRoom object
+  factory ChatRoom.fromJson(Map<String, dynamic> json) {
     return ChatRoom(
-      id: doc.id,
-      participants: List<String>.from(data['participants'] ?? []),
-      participantNames: List<String>.from(data['participantNames'] ?? []),
-      participantRoles: List<String>.from(data['participantRoles'] ?? []),
-      lastMessage: data['lastMessage'] ?? '',
-      lastMessageTime: (data['lastMessageTime'] as Timestamp).toDate(),
-      lastMessageSenderId: data['lastMessageSenderId'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      id: json['id'] ?? '',
+      participants: List<String>.from(json['participants'] ?? []),
+      participantNames: List<String>.from(json['participantNames'] ?? []),
+      participantRoles: List<String>.from(json['participantRoles'] ?? []),
+      lastMessage: json['lastMessage'] ?? '',
+      lastMessageTime: json['lastMessageTime'] ?? '',
+      lastMessageSenderId: json['lastMessageSenderId'] ?? '',
+      createdAt: json['createdAt'] ?? '',
     );
   }
 
+  // Convert a ChatRoom object into a map to be saved to Firebase Realtime Database
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'participants': participants,
       'participantNames': participantNames,
       'participantRoles': participantRoles,
       'lastMessage': lastMessage,
-      'lastMessageTime': Timestamp.fromDate(lastMessageTime),
+      'lastMessageTime': lastMessageTime,
       'lastMessageSenderId': lastMessageSenderId,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt,
     };
   }
 }
