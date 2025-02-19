@@ -1,0 +1,46 @@
+[
+    {
+        "issues": [
+            {
+                "ruleId": "unnecessary-nullable"
+            },
+            {
+                "ruleId": "unnecessary-nullable"
+            },
+            {
+                "ruleId": "unnecessary-nullable"
+            },
+            {
+                "ruleId": "unnecessary-nullable"
+            },
+            {
+                "ruleId": "unnecessary-nullable"
+            },
+            {
+                "ruleId": "unnecessary-nullable"
+            },
+            {
+                "ruleId": "unnecessary-nullable"
+            },
+            {
+                "ruleId": "unnecessary-nullable"
+            }
+        ]
+    },
+    {
+        "issues": [
+            {
+                "ruleId": "avoid-late-keyword"
+            },
+            {
+                "ruleId": "avoid-late-keyword"
+            },
+            {
+                "ruleId": "avoid-late-keyword"
+            },
+            {
+                "ruleId": "avoid-late-keyword"
+            }
+        ]
+    }
+]

@@ -20,6 +20,66 @@ class ProjectController extends ChangeNotifier {
     if (user == null) return;
 
     _isLoading = true;
+    notifyListeners(); // ✅ Notifies UI to show loading indicator
+
+    try {
+      final fetchedProjects = await _projectService.getProjects(user.uid, userType);
+      print("Projects retrieved: ${fetchedProjects.length}"); // ✅ Debugging print
+
+      _projects = fetchedProjects;
+    } catch (e) {
+      print('Error loading projects: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners(); // ✅ Updates UI with new data
+  }
+
+
+  //////////////
+  // Assign a project
+  /*Future<void> assignProject(String projectId, String? contractorId, String? architectId) async {
+    try {
+      await _projectService.assignProject(projectId, contractorId, architectId);
+      await loadProjects(); // Refresh UI
+    } catch (e) {
+      print("Error assigning project: $e");
+    }
+  }
+
+// Fetch projects assigned to contractor/architect
+  Future<void> loadAssignedProjects() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      _projects = await _projectService.getAssignedProjects(user.uid, userType);
+    } catch (e) {
+      print("Error fetching assigned projects: $e");
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }*/
+
+
+
+
+
+
+
+  /////////////////
+
+
+  /*Future<void> loadProjects() async||| {
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    _isLoading = true;
     notifyListeners();
 
     try {
@@ -30,7 +90,7 @@ class ProjectController extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
-  }
+  }*/
 
   // Add a new project
   Future<void> addProject(Project project) async {
@@ -53,7 +113,7 @@ class ProjectController extends ChangeNotifier {
   }
 
   // Delete a project
-  Future<void> deleteProject(String projectId) async {
+  /*Future<void> deleteProject(String projectId) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -63,7 +123,21 @@ class ProjectController extends ChangeNotifier {
     } catch (e) {
       print('Error deleting project: $e');
     }
+  }*/
+  Future<void> deleteProject(String projectId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await _projectService.deleteProject(projectId, user.uid);
+
+        _projects.removeWhere((project) => project.id == projectId); // ✅ Remove from local list
+        notifyListeners(); // ✅ Update UI
+      }
+    } catch (e) {
+      print('Error deleting project: $e');
+    }
   }
+
 }
 
 

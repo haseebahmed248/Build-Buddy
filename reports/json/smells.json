@@ -1,0 +1,59 @@
+[
+    {
+        "issues": [
+            {
+                "ruleId": "unused-code"
+            },
+            {
+                "ruleId": "unused-code"
+            },
+            {
+                "ruleId": "unused-code"
+            },
+            {
+                "ruleId": "unused-code"
+            },
+            {
+                "ruleId": "unused-code"
+            },
+            {
+                "ruleId": "unused-code"
+            },
+            {
+                "ruleId": "unused-code"
+            }
+        ]
+    },
+    {
+        "issues": [
+            {
+                "ruleId": "long-method"
+            },
+            {
+                "ruleId": "long-method"
+            },
+            {
+                "ruleId": "long-method"
+            },
+            {
+                "ruleId": "long-method"
+            },
+            {
+                "ruleId": "long-method"
+            }
+        ]
+    },
+    {
+        "issues": [
+            {
+                "ruleId": "large-class"
+            },
+            {
+                "ruleId": "large-class"
+            },
+            {
+                "ruleId": "large-class"
+            }
+        ]
+    }
+]

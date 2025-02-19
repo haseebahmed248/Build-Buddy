@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,8 @@ import 'package:buildbuddy/Views/DashBoard/Contractor/messages.dart';
 import 'package:buildbuddy/Views/DashBoard/Contractor/Payments.dart';
 import 'package:buildbuddy/Views/DashBoard/Contractor/RatingAndReviews.dart';
 import 'package:buildbuddy/Controllers/authControllers.dart';
+
+import 'Contractor/chatContractor/contractor_chat_screen.dart';
 
 class ContractorDashboard extends StatefulWidget {
   const ContractorDashboard({super.key});
@@ -363,7 +366,7 @@ class ContractorDashboardState extends State<ContractorDashboard>
     );
   }
 
-  Widget _buildDashboardGrid() {
+ /* Widget _buildDashboardGrid() {
     final List<Map<String, dynamic>> menuItems = [
       {
         'title': 'Manage Projects',
@@ -381,6 +384,53 @@ class ContractorDashboardState extends State<ContractorDashboard>
         'title': 'Messages',
         'icon': Icons.message,
         'route': MessagesScreen(),
+        'color': const Color(0xFFFFC107),
+      },
+      {
+        'title': 'Payments',
+        'icon': Icons.payments_outlined,
+        'route': const PaymentsScreen(),
+        'color': const Color(0xFFE91E63),
+      },
+      {
+        'title': 'Reviews',
+        'icon': Icons.star_border,
+        'route': RatingsReviewsScreen(),
+        'color': const Color(0xFF9C27B0),
+      },
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.1,
+      ),
+      itemCount: menuItems.length,
+      itemBuilder: (context, index) => _buildMenuItem(menuItems[index]),
+    );
+  }*/
+  Widget _buildDashboardGrid() {
+    final List<Map<String, dynamic>> menuItems = [
+      {
+        'title': 'Manage Projects',
+        'icon': Icons.construction,
+        'route': const ManageProjectsScreen(),
+        'color': const Color(0xFF2196F3),
+      },
+      {
+        'title': 'Material Orders',
+        'icon': Icons.inventory_2,
+        'route': const MaterialOrdersScreen(),
+        'color': const Color(0xFF4CAF50),
+      },
+      {
+        'title': 'Messages',
+        'icon': Icons.message,
+        'route': ContractorChatScreen(), // Changed to contractor chat screen
         'color': const Color(0xFFFFC107),
       },
       {
@@ -441,7 +491,7 @@ class ContractorDashboardState extends State<ContractorDashboard>
                   color: item['color'].withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(item['icon'], color: item['color'], size: 32),
+                child: Icon(item['icon'], color: item['color'], size: 28),
               ),
               const SizedBox(height: 12),
               Text(
@@ -459,6 +509,55 @@ class ContractorDashboardState extends State<ContractorDashboard>
       ),
     );
   }
+
+ /* Widget _buildMenuItem(Map<String, dynamic> item) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => item['route']),
+        ),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: item['color'].withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: item['color'].withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(item['icon'], color: item['color'], size: 32),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                item['title'],
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: item['color'].withOpacity(0.8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }*/
 }
 
 class ProfileScreen extends StatelessWidget {

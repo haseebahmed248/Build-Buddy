@@ -482,7 +482,7 @@
 //   }
 // }
 
-import 'package:flutter/material.dart';
+/*import 'package:flutter/material.dart';
 
 class MessagesDashboard extends StatelessWidget {
   const MessagesDashboard({Key? key}) : super(key: key);
@@ -868,4 +868,126 @@ class ChatMessage {
     required this.isMe,
     required this.sender,
   });
+}*/
+/*
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'package:buildbuddy/Models/chatModel.dart';
+import 'package:buildbuddy/Services/chat/chatService.dart';
+
+class ChatScreen extends StatefulWidget {
+  final String receiverId; // ID of the other user in chat
+  final String receiverName; // Name of the receiver
+
+  const ChatScreen({super.key, required this.receiverId, required this.receiverName});
+
+  @override
+  _ChatScreenState createState() => _ChatScreenState();
 }
+
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _messageController = TextEditingController();
+  late String senderId; // ID of the logged-in user
+  late String userRole; // Role of the logged-in user
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeUser(); // Fetch current user info
+  }
+
+  Future<void> _initializeUser() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      senderId = user.uid;
+      userRole = await ChatService().getUserRoleFromFirebase() ?? 'Unknown';
+      setState(() {}); // Refresh UI after fetching role
+    }
+  }
+
+  void _sendMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+
+    ChatMessage message = ChatMessage(
+      senderId: senderId,
+      receiverId: widget.receiverId,
+      message: _messageController.text.trim(),
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    await ChatService().sendMessage(message);
+    _messageController.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Chat with ${widget.receiverName}")),
+      body: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<List<ChatMessage>>(
+              stream: ChatService().getMessages(senderId, widget.receiverId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text("No messages yet."));
+                }
+
+                final messages = snapshot.data!;
+                return ListView.builder(
+                  reverse: true,
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final message = messages[index];
+                    bool isMe = message.senderId == senderId;
+
+                    return Align(
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isMe ? Colors.blue : Colors.grey[300],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(message.message, style: const TextStyle(fontSize: 16)),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+
+          // Message Input Field
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: "Type a message...",
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.blue),
+                  onPressed: _sendMessage,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+*/
+

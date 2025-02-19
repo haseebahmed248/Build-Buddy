@@ -1,4 +1,4 @@
-
+flutter pub run dart_code_metrics:metrics analyze lib > metrics_report.txt 2>&1
 ┌─────────────────────────────────────────────────────────┐
 │ A new version of Flutter is available!                  │
 │                                                         │

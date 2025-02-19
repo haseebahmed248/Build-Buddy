@@ -1,6 +1,6 @@
-projectKey=my_flutter_project
+projectKey=my_fyp_project
 serverUrl=http://localhost:9000
 serverVersion=2025.1.0.102418
-dashboardUrl=http://localhost:9000/dashboard?id=my_flutter_project
-ceTaskId=609fd827-49f8-4306-9634-ac48e7ae6ed3
-ceTaskUrl=http://localhost:9000/api/ce/task?id=609fd827-49f8-4306-9634-ac48e7ae6ed3
+dashboardUrl=http://localhost:9000/dashboard?id=my_fyp_project
+ceTaskId=74e8731e-2d8c-4063-a285-cea8a7ea9a2d
+ceTaskUrl=http://localhost:9000/api/ce/task?id=74e8731e-2d8c-4063-a285-cea8a7ea9a2d

@@ -1,3 +1,257 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geocoding/geocoding.dart';
+
+class FindProfessionalsDashboard extends StatefulWidget {
+  const FindProfessionalsDashboard({super.key});
+
+  @override
+  State<FindProfessionalsDashboard> createState() =>
+      _FindProfessionalsDashboardState();
+}
+
+class _FindProfessionalsDashboardState
+    extends State<FindProfessionalsDashboard> {
+  String selectedProfession = '';
+  String userLocation = 'Faisalabad, Punjab';
+  Position? _currentPosition;
+  LatLng _selectedLocation = LatLng(31.4504, 73.1350);
+  bool isSearching = false;
+  TextEditingController _searchController = TextEditingController();
+  final MapController _mapController = MapController();
+
+  final Map<String, List<Professional>> professionals = {
+    'Architects': [
+      Professional(name: 'John Doe', role: 'Architect', rating: 4.5),
+      Professional(name: 'Alice Green', role: 'Architect', rating: 4.7),
+    ],
+    'Contractors': [
+      Professional(name: 'Jane Smith', role: 'Contractor', rating: 4.8),
+      Professional(name: 'Robert Brown', role: 'Contractor', rating: 4.6),
+    ],
+  };
+
+  Color _getProfessionColor(String profession) {
+    switch (profession) {
+      case 'Architects':
+        return const Color(0xFF2ECC71); // Bright Green
+      case 'Contractors':
+        return const Color(0xFF3498DB); // Bright Blue
+      default:
+        return const Color(0xFF95A5A6); // Gray
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, cannot request permissions.');
+    }
+
+    final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+    setState(() {
+      _currentPosition = position;
+      _selectedLocation = LatLng(position.latitude, position.longitude);
+      _updateUserLocation(position.latitude, position.longitude);
+    });
+  }
+
+  Future<void> _updateUserLocation(double latitude, double longitude) async {
+    try {
+      List<Placemark> placemarks =
+      await placemarkFromCoordinates(latitude, longitude);
+      Placemark place = placemarks[0];
+      setState(() {
+        userLocation =
+        "${place.locality}, ${place.administrativeArea}"; // Format address
+      });
+    } catch (e) {
+      print("Error fetching address: $e");
+    }
+  }
+
+  Future<void> _onMapTap(TapPosition tapPosition, LatLng location) async {
+    setState(() {
+      _selectedLocation = location;
+      _updateUserLocation(location.latitude, location.longitude);
+    });
+  }
+
+  Widget _buildMap() {
+    return Container(
+      height: 250,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: _selectedLocation, // ✅ Updated API
+            initialZoom: 13.0, // ✅ Updated API
+            onTap: _onMapTap,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate:
+              'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              subdomains: ['a', 'b', 'c'],
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  width: 80.0,
+                  height: 80.0,
+                  point: _selectedLocation,
+                  child: const Icon(
+                    Icons.location_on,
+                    color: Colors.red,
+                    size: 40,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Find Professionals"),
+        backgroundColor: Colors.blueAccent,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding:
+            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.location_on, color: Colors.redAccent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    userLocation,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _getCurrentLocation,
+                  child: const Text("Update Location"),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _buildMap(),
+          ),
+          if (selectedProfession.isNotEmpty)
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: professionals[selectedProfession]?.length ?? 0,
+                itemBuilder: (context, index) {
+                  final professional =
+                  professionals[selectedProfession]![index];
+                  return _buildProfessionalCard(professional);
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfessionalCard(Professional professional) {
+    return Card(
+      elevation: 3,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListTile(
+        leading: Icon(
+          professional.role == 'Architect'
+              ? Icons.architecture
+              : Icons.engineering,
+          color: _getProfessionColor(professional.role),
+        ),
+        title: Text(professional.name),
+        subtitle: Text(professional.role),
+        trailing: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            '${professional.rating}⭐',
+            style: const TextStyle(color: Colors.orange),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class Professional {
+  final String name;
+  final String role;
+  final double rating;
+
+  Professional({required this.name, required this.role, required this.rating});
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 
 
 
@@ -511,3 +765,4 @@ class Professional {
 
   Professional({required this.name, required this.role, required this.rating});
 }
+*/
