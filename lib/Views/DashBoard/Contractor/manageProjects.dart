@@ -1,4 +1,4 @@
-import 'package:buildbuddy/Controllers/projectController.dart';
+/*import 'package:buildbuddy/Controllers/projectController.dart';
 import 'package:buildbuddy/Models/projectModel.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -337,28 +337,16 @@ class _ContractorUpdateScreenState extends State<ContractorUpdateScreen> {
 // Extension to capitalize strings for UI
 extension StringExtension on String {
   String get capitalize => this.isNotEmpty ? '${this[0].toUpperCase()}${substring(1).toLowerCase()}' : this;
-}
+}*/
 
-
-
-
-
-
-
-
-
-
-
-
-
-/*
+////////////////////////////////////////////
 import 'package:buildbuddy/Controllers/projectController.dart';
 import 'package:buildbuddy/Models/projectModel.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'chatContractor/contractor_chat_screen.dart';
+import 'package:buildbuddy/Views/Shared/Messages/chatscreen.dart'; // Use the unified ChatScreen
 
 class ManageProjectsScreen extends StatefulWidget {
   final String userType;
@@ -372,8 +360,6 @@ class ManageProjectsScreen extends StatefulWidget {
 }
 
 class _ManageProjectsScreenState extends State<ManageProjectsScreen> {
-  late ProjectController _controller; // Declare controller locally
-
   @override
   void initState() {
     super.initState();
@@ -381,13 +367,13 @@ class _ManageProjectsScreenState extends State<ManageProjectsScreen> {
       final user = FirebaseAuth.instance.currentUser;
       print("Current user UID: ${user?.uid}, userType from widget: ${widget.userType}");
       if (user != null) {
-        _controller = Provider.of<ProjectController>(context, listen: false);
-        if (_controller.userType != 'contractor') {
-          print("Creating new ProjectController with userType: contractor");
-          _controller = ProjectController('contractor'); // Force contractor userType
+        final controller = Provider.of<ProjectController>(context, listen: false);
+        if (controller.userType != 'contractor') {
+          print("Updating ProjectController userType to contractor");
+          controller.updateUserType('contractor');
         }
         print("Loading projects for contractor with UID: ${user.uid}, type: ${widget.userType}");
-        _controller.loadProjects(); // Load projects for contractor
+        controller.loadProjects();
       } else {
         print("No user logged in, cannot load projects");
       }
@@ -409,7 +395,7 @@ class _ManageProjectsScreenState extends State<ManageProjectsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manage Projects'),
-        backgroundColor: const Color(0xFF2196F3), // Match homeowner design
+        backgroundColor: const Color(0xFF2196F3),
         elevation: 0,
       ),
       body: Consumer<ProjectController>(
@@ -417,7 +403,6 @@ class _ManageProjectsScreenState extends State<ManageProjectsScreen> {
           if (controller.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-          // Filter projects where the contractor is assigned
           final assignedProjects = controller.projects.where((project) {
             print("Checking project ${project.id}: assignedContractorId = ${project.assignedContractorId}, contractorId = $contractorId");
             return project.assignedContractorId == contractorId;
@@ -427,26 +412,14 @@ class _ManageProjectsScreenState extends State<ManageProjectsScreen> {
             return const Center(child: Text('No assigned projects found.'));
           }
           return ListView.builder(
-            padding: const EdgeInsets.all(16), // Add padding for cleaner look
+            padding: const EdgeInsets.all(16),
             itemCount: assignedProjects.length,
             itemBuilder: (context, index) {
               final project = assignedProjects[index];
               return ContractorProjectItem(
                 project: project,
                 onUpdate: () => _navigateToUpdateProject(project),
-                onChat: () {
-                  if (project.userId != null) {
-                    _navigateToChat(project.userId!, project.id, project.title);
-                  } else {
-                    Get.snackbar(
-                      'Error',
-                      'Cannot start chat: Homeowner ID is missing for this project.',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.red,
-                      colorText: Colors.white,
-                    );
-                  }
-                },
+                onChat: () => _navigateToChat(project.id, project.title),
               );
             },
           );
@@ -461,14 +434,12 @@ class _ManageProjectsScreenState extends State<ManageProjectsScreen> {
     );
 
     if (updatedProject != null) {
-      await Provider.of<ProjectController>(context, listen: false)
-          .updateProject(updatedProject);
+      await Provider.of<ProjectController>(context, listen: false).updateProject(updatedProject);
     }
   }
 
-  Future<void> _navigateToChat(String homeownerId, String projectId, String projectTitle) async {
-    await Get.to(() => ContractorChatScreen(
-      homeownerId: homeownerId, // Now guaranteed to be non-null
+  Future<void> _navigateToChat(String projectId, String projectTitle) async {
+    await Get.to(() => ChatScreen(
       projectId: projectId,
       projectTitle: projectTitle,
     ));
@@ -491,7 +462,7 @@ class ContractorProjectItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12), // Space between cards
+      margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         title: Text(
@@ -506,7 +477,7 @@ class ContractorProjectItem extends StatelessWidget {
               style: TextStyle(color: Colors.grey[600], fontSize: 14),
             ),
             Text(
-              'Status: ${(project.status.toString().split('.').last).capitalize!}',
+              'Status: ${GetStringUtils(project.status.toString().split('.').last).capitalize!}',
               style: TextStyle(color: Colors.blue, fontSize: 14),
             ),
             Text(
@@ -554,8 +525,7 @@ class ContractorProjectItem extends StatelessWidget {
 class ContractorUpdateScreen extends StatefulWidget {
   final Project project;
 
-  const ContractorUpdateScreen({required this.project, Key? key})
-      : super(key: key);
+  const ContractorUpdateScreen({required this.project, Key? key}) : super(key: key);
 
   @override
   _ContractorUpdateScreenState createState() => _ContractorUpdateScreenState();
@@ -629,7 +599,7 @@ class _ContractorUpdateScreenState extends State<ContractorUpdateScreen> {
                 items: ProjectStatus.values.map((status) {
                   return DropdownMenuItem(
                     value: status,
-                    child: Text((status.toString().split('.').last).capitalize!),
+                    child: Text(GetStringUtils(status.toString().split('.').last).capitalize!),
                   );
                 }).toList(),
                 onChanged: (value) => setState(() => _status = value!),
@@ -653,6 +623,17 @@ class _ContractorUpdateScreenState extends State<ContractorUpdateScreen> {
   Future<void> _saveUpdates() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (widget.project.createdAt == null) {
+      print("Error: Project ${widget.project.id} has no createdAt timestamp. Using current time as fallback.");
+      Get.snackbar(
+        'Warning',
+        'Project creation timestamp is missing. Contact support.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+    }
+
     final updatedProject = Project(
       id: widget.project.id,
       title: widget.project.title,
@@ -666,14 +647,29 @@ class _ContractorUpdateScreenState extends State<ContractorUpdateScreen> {
       assignedContractorId: widget.project.assignedContractorId,
       assignedArchitectId: widget.project.assignedArchitectId,
       messages: widget.project.messages ?? [],
-      reviewed: widget.project.reviewed, // Retain reviewed status
+      reviewed: widget.project.reviewed,
+      createdAt: widget.project.createdAt ?? DateTime.now(),
+      lastUpdated: DateTime.now(),
     );
 
+    print("Saving updated project: ${updatedProject.id}, status: ${updatedProject.status}, progress: ${updatedProject.progress}");
     Get.back(result: updatedProject);
   }
 }
 
-*/
+// Extension to capitalize strings for UI
+extension GetStringUtils on String {
+  String? get capitalize => this.isNotEmpty ? '${this[0].toUpperCase()}${substring(1).toLowerCase()}' : this;
+}
+
+//////////////////////////////////////////
+
+
+
+
+
+
+
 
 
 
