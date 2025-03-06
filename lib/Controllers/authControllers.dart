@@ -1040,7 +1040,6 @@ Future<void> updateEmailVerificationStatus() async {
 
 
 
-
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -1080,7 +1079,7 @@ class AuthController extends GetxController {
     super.onInit();
     // Listen to auth state changes
     _authStateSubscription = _auth.authStateChanges().listen(_onAuthStateChanged);
-    _startUsersListener(); // Start listening for all users
+    _startUsersListener(); // Start listening for users
   }
 
   /// Handles authentication state changes, updating the current user and notifying listeners.
@@ -1124,40 +1123,75 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Starts real-time listener for all users, ensuring performance (SRS 3.2.1) and usability (SRS 3.2.2).
+  /// Starts real-time listener for users, scoped to the user's role unless they are an admin.
+  /// Ensures performance (SRS 3.2.1) and usability (SRS 3.2.2).
   void _startUsersListener() {
-    _usersSubscription = _database.child('user').onValue.listen((event) {
-      if (event.snapshot.exists) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>?;
-        if (data != null) {
-          _users.clear();
-          data.forEach((role, users) {
-            if (users is Map) {
-              users.forEach((uid, userData) async {
+    // Wait until currentUser is set to determine the role
+    ever(currentUser, (UserData? user) {
+      _usersSubscription?.cancel(); // Cancel any existing subscription
+
+      if (user == null) {
+        _users.clear();
+        return;
+      }
+
+      // Determine the path based on the user's role
+      String path = 'user';
+      if (user.role != UserRole.admin) {
+        path = 'user/${user.role.name}';
+      }
+
+      _usersSubscription = _database.child(path).onValue.listen((event) {
+        if (event.snapshot.exists) {
+          final data = event.snapshot.value as Map<dynamic, dynamic>?;
+          if (data != null) {
+            _users.clear();
+            if (path == 'user') {
+              // Admin case: Iterate over all roles
+              data.forEach((role, users) {
+                if (users is Map) {
+                  users.forEach((uid, userData) async {
+                    if (userData is Map) {
+                      try {
+                        final userObj = await UserData.fromJson(
+                            Map<String, dynamic>.from(userData), uid as String);
+                        _users.add(userObj);
+                      } catch (e) {
+                        print('Error parsing user $uid: $e');
+                      }
+                    }
+                  });
+                }
+              });
+            } else {
+              // Non-admin case: Data is already scoped to the role
+              data.forEach((uid, userData) async {
                 if (userData is Map) {
                   try {
-                    final user = await UserData.fromJson(
+                    final userObj = await UserData.fromJson(
                         Map<String, dynamic>.from(userData), uid as String);
-                    _users.add(user);
+                    _users.add(userObj);
                   } catch (e) {
                     print('Error parsing user $uid: $e');
                   }
                 }
               });
             }
-          });
-          _users.sort((a, b) => a.email.compareTo(b.email));
+            _users.sort((a, b) => a.email.compareTo(b.email));
+          }
+        } else {
+          _users.clear();
         }
-      }
-    }, onError: (error) {
-      errorMessage.value = 'Failed to load users: $error';
-      Get.snackbar(
-        'Error',
-        'Failed to load users: $error',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      }, onError: (error) {
+        errorMessage.value = 'Failed to load users: $error';
+        Get.snackbar(
+          'Error',
+          'Failed to load users: $error',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      });
     });
   }
 
@@ -1426,7 +1460,6 @@ class AuthController extends GetxController {
     super.onClose();
   }
 }
-
 
 
 

@@ -998,7 +998,6 @@ class _MyProjectsDashboardState extends State<MyProjectsDashboard> {
     if (newProject != null) {
       print('New project created: ${newProject.id}, title: ${newProject.title}');
       await Provider.of<ProjectController>(context, listen: false).addProject(newProject);
-      // Force UI update by notifying listeners
       Provider.of<ProjectController>(context, listen: false).notifyListeners();
     }
   }
@@ -1034,7 +1033,6 @@ class _MyProjectsDashboardState extends State<MyProjectsDashboard> {
       }
       Get.snackbar('Success', 'Project created with professional assigned',
           snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green);
-      // Force UI update by notifying listeners
       Provider.of<ProjectController>(context, listen: false).notifyListeners();
     }
   }
@@ -1057,7 +1055,6 @@ class _MyProjectsDashboardState extends State<MyProjectsDashboard> {
       }
       Get.snackbar('Success', 'Project updated successfully',
           snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green);
-      // Force UI update by notifying listeners
       Provider.of<ProjectController>(context, listen: false).notifyListeners();
     }
   }
@@ -1090,6 +1087,7 @@ class _MyProjectsDashboardState extends State<MyProjectsDashboard> {
     await Get.to(() => ChatScreen(
       projectId: projectId,
       projectTitle: projectTitle,
+      userType: widget.userType, // Pass userType explicitly
     ));
   }
 

@@ -86,9 +86,9 @@ class ProjectController extends ChangeNotifier {
       return;
     }
 
-    print('Starting real-time listener for projects, userType=$_userType, userId=${user.uid}');
+    print('Starting real-time listener for projects, userType=$_userType, userId=${user.uid}, queryPath=${query.path}');
     _projectsSubscription = query.onValue.listen((event) {
-      print('Projects listener triggered: snapshot exists=${event.snapshot.exists}');
+      print('Projects listener triggered: snapshot exists=${event.snapshot.exists}, value=${event.snapshot.value}');
       if (event.snapshot.exists && event.snapshot.value != null) {
         final data = event.snapshot.value as Map<dynamic, dynamic>;
         print('Raw projects data: $data');
@@ -100,9 +100,16 @@ class ProjectController extends ChangeNotifier {
             projectMap['id'] = projectId;
             try {
               final project = Project.fromMap(projectMap);
-              print('Adding project: $projectId, title=${project.title}');
-              _projects.add(project);
-              _startMessageListener(projectId);
+              // Verify the user has access based on role
+              if (_userType == 'homeowner' && project.userId == user.uid ||
+                  _userType == 'contractor' && project.assignedContractorId == user.uid ||
+                  _userType == 'architect' && project.assignedArchitectId == user.uid) {
+                print('Adding project: $projectId, title=${project.title}, userId=${project.userId}, assignedContractorId=${project.assignedContractorId}');
+                _projects.add(project);
+                _startMessageListener(projectId);
+              } else {
+                print('Skipping project $projectId: User ${user.uid} does not have access');
+              }
             } catch (e) {
               _errorMessage = 'Error parsing project $projectId: $e';
               print('$_errorMessage, Data: $projectMap');
@@ -125,7 +132,7 @@ class ProjectController extends ChangeNotifier {
       }
     }, onError: (error) {
       _errorMessage = 'Error loading projects: $error';
-      print(_errorMessage);
+      print('Projects listener error: $_errorMessage');
       Get.snackbar('Error', _errorMessage!,
           snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
       _projects.clear();
@@ -219,11 +226,16 @@ class ProjectController extends ChangeNotifier {
           _projects[projectIndex] = updatedProject;
           print('Updated messages for project $projectId: ${messages.length} messages');
           notifyListeners();
+        } else {
+          print('Project $projectId not found in _projects list');
         }
+      } else {
+        print('No messages found for project $projectId');
       }
     }, onError: (error) {
       _errorMessage = 'Error loading messages for project $projectId: $error';
       print(_errorMessage);
+      notifyListeners();
     });
   }
 
@@ -258,14 +270,20 @@ class ProjectController extends ChangeNotifier {
       print("Loading projects for user: ${user.uid}, type: $_userType");
       _projects = await _projectService.getProjects(user.uid, _userType);
       print("Projects retrieved: ${_projects.length} for ${user.uid}, type: $_userType");
+      _projects.forEach((project) {
+        print("Loaded project: ${project.id}, userId: ${project.userId}, assignedContractorId: ${project.assignedContractorId}");
+      });
+
+      // Start message listeners for each loaded project
       for (var project in _projects) {
         _startMessageListener(project.id);
       }
+
       await _loadStats(user.uid);
       _errorMessage = null;
     } catch (e) {
       _errorMessage = 'Failed to load projects: $e';
-      print(_errorMessage);
+      print("Error loading projects: $_errorMessage");
       _projects.clear();
       Get.snackbar('Error', _errorMessage!,
           snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
@@ -273,6 +291,26 @@ class ProjectController extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _loadStats(String userId) async {
+    try {
+      _activeProjectsCount = await _projectService.getActiveProjectsCount(userId);
+      _pendingReviewsCount = await _projectService.getPendingReviewsCount(userId);
+      _newMessagesCount = await _projectService.getNewMessagesCount(userId, _userType);
+      print("Stats loaded - Active: $_activeProjectsCount, Pending Reviews: $_pendingReviewsCount, New Messages: $_newMessagesCount");
+    } catch (e) {
+      _errorMessage = 'Failed to load stats: $e';
+      print(_errorMessage);
+      _activeProjectsCount = 0;
+      _pendingReviewsCount = 0;
+      _newMessagesCount = 0;
+      if (_errorMessage!.contains('index-not-defined') || _errorMessage!.contains('permission-denied')) {
+        print('Retrying stats load due to index or permission error...');
+        Future.delayed(const Duration(seconds: 2), () => _loadStats(userId));
+      }
+    }
+    notifyListeners();
   }
 
   Future<void> loadContractors() async {
@@ -309,22 +347,6 @@ class ProjectController extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  Future<void> _loadStats(String userId) async {
-    try {
-      _activeProjectsCount = await _projectService.getActiveProjectsCount(userId);
-      _pendingReviewsCount = await _projectService.getPendingReviewsCount(userId);
-      _newMessagesCount = await _projectService.getNewMessagesCount(userId, _userType);
-      print("Stats loaded - Active: $_activeProjectsCount, Pending Reviews: $_pendingReviewsCount, New Messages: $_newMessagesCount");
-    } catch (e) {
-      _errorMessage = 'Failed to load stats: $e';
-      print(_errorMessage);
-      _activeProjectsCount = 0;
-      _pendingReviewsCount = 0;
-      _newMessagesCount = 0;
-    }
-    notifyListeners();
   }
 
   Future<void> saveReview(String projectId, String professionalId, int rating, String review, String professionalRole) async {
@@ -476,6 +498,7 @@ extension ProjectExtension on Project {
     );
   }
 }
+
 
 
 /*

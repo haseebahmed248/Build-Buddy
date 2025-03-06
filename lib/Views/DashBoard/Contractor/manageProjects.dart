@@ -346,7 +346,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:buildbuddy/Views/Shared/Messages/chatscreen.dart'; // Use the unified ChatScreen
+import 'package:buildbuddy/Views/Shared/Messages/chatscreen.dart';
 
 class ManageProjectsScreen extends StatefulWidget {
   final String userType;
@@ -442,6 +442,7 @@ class _ManageProjectsScreenState extends State<ManageProjectsScreen> {
     await Get.to(() => ChatScreen(
       projectId: projectId,
       projectTitle: projectTitle,
+      userType: widget.userType, // Pass userType explicitly
     ));
   }
 }
@@ -532,7 +533,7 @@ class ContractorUpdateScreen extends StatefulWidget {
 }
 
 class _ContractorUpdateScreenState extends State<ContractorUpdateScreen> {
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>(); // Corrected to proper initialization
   late TextEditingController _progressController;
   late ProjectStatus _status;
 
@@ -557,7 +558,7 @@ class _ContractorUpdateScreenState extends State<ContractorUpdateScreen> {
         backgroundColor: const Color(0xFF2196F3),
       ),
       body: Form(
-        key: _formKey,
+        key: _formKey, // Assign the GlobalKey to the Form
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -621,39 +622,39 @@ class _ContractorUpdateScreenState extends State<ContractorUpdateScreen> {
   }
 
   Future<void> _saveUpdates() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_formKey.currentState!.validate()) { // Corrected to use _formKey.currentState
+      if (widget.project.createdAt == null) {
+        print("Error: Project ${widget.project.id} has no createdAt timestamp. Using current time as fallback.");
+        Get.snackbar(
+          'Warning',
+          'Project creation timestamp is missing. Contact support.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+        );
+      }
 
-    if (widget.project.createdAt == null) {
-      print("Error: Project ${widget.project.id} has no createdAt timestamp. Using current time as fallback.");
-      Get.snackbar(
-        'Warning',
-        'Project creation timestamp is missing. Contact support.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
+      final updatedProject = Project(
+        id: widget.project.id,
+        title: widget.project.title,
+        description: widget.project.description,
+        userId: widget.project.userId,
+        userType: widget.project.userType,
+        status: _status,
+        progress: int.parse(_progressController.text),
+        date: widget.project.date,
+        icon: widget.project.icon,
+        assignedContractorId: widget.project.assignedContractorId,
+        assignedArchitectId: widget.project.assignedArchitectId,
+        messages: widget.project.messages ?? [],
+        reviewed: widget.project.reviewed,
+        createdAt: widget.project.createdAt ?? DateTime.now(),
+        lastUpdated: DateTime.now(),
       );
+
+      print("Saving updated project: ${updatedProject.id}, status: ${updatedProject.status}, progress: ${updatedProject.progress}");
+      Get.back(result: updatedProject);
     }
-
-    final updatedProject = Project(
-      id: widget.project.id,
-      title: widget.project.title,
-      description: widget.project.description,
-      userId: widget.project.userId,
-      userType: widget.project.userType,
-      status: _status,
-      progress: int.parse(_progressController.text),
-      date: widget.project.date,
-      icon: widget.project.icon,
-      assignedContractorId: widget.project.assignedContractorId,
-      assignedArchitectId: widget.project.assignedArchitectId,
-      messages: widget.project.messages ?? [],
-      reviewed: widget.project.reviewed,
-      createdAt: widget.project.createdAt ?? DateTime.now(),
-      lastUpdated: DateTime.now(),
-    );
-
-    print("Saving updated project: ${updatedProject.id}, status: ${updatedProject.status}, progress: ${updatedProject.progress}");
-    Get.back(result: updatedProject);
   }
 }
 
@@ -661,7 +662,6 @@ class _ContractorUpdateScreenState extends State<ContractorUpdateScreen> {
 extension GetStringUtils on String {
   String? get capitalize => this.isNotEmpty ? '${this[0].toUpperCase()}${substring(1).toLowerCase()}' : this;
 }
-
 //////////////////////////////////////////
 
 
