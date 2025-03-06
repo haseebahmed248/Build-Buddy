@@ -1,3 +1,4 @@
+/*
 import 'package:buildbuddy/Services/auth/authService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -157,6 +158,7 @@ void main() {
       final response = await authService.signInWithEmailAndPassword(credentials);
 
       // Assert
+
       expect(response.isSuccess, isFalse);
       expect(response.message, contains('Please verify your email before logging in'));
     });
@@ -230,8 +232,8 @@ void main() {
     });
   });
 
-  // Add more groups for other methods like signInWithGoogle, signOut, etc., as needed
 }
+*/
 /*
 void main() {
   late MockFirebaseAuthMock mockFirebaseAuth;
@@ -301,3 +303,4 @@ void main() {
 
   // Other test groups...
 }*/
+

@@ -1,4 +1,105 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:buildbuddy/Controllers/contractorController.dart';
+
+class MaterialOrdersScreen extends StatelessWidget {
+  const MaterialOrdersScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Material Orders'),
+      ),
+      body: Consumer<ContractorController>(
+        builder: (context, controller, child) {
+          if (controller.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (controller.errorMessage != null) {
+            return Center(child: Text('Error: ${controller.errorMessage}'));
+          }
+          return ListView.builder(
+            itemCount: controller.orders.length,
+            itemBuilder: (context, index) {
+              final order = controller.orders[index];
+              return ListTile(
+                title: Text('Order #${order.id} - ${order.material}'),
+                subtitle: Text('Quantity: ${order.quantity}, Status: ${order.status}'),
+                trailing: Text('\$${order.price}'),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showPlaceOrderDialog(context),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _showPlaceOrderDialog(BuildContext context) {
+    final contractorController = Provider.of<ContractorController>(context, listen: false);
+    String vendorId = '';
+    String material = '';
+    int quantity = 1;
+    double price = 0.0;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Place Material Order'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              decoration: const InputDecoration(labelText: 'Vendor ID'),
+              onChanged: (value) => vendorId = value,
+            ),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Material'),
+              onChanged: (value) => material = value,
+            ),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Quantity'),
+              keyboardType: TextInputType.number,
+              onChanged: (value) => quantity = int.tryParse(value) ?? 1,
+            ),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Price (\$)'),
+              keyboardType: TextInputType.number,
+              onChanged: (value) => price = double.tryParse(value) ?? 0.0,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              contractorController.placeOrder(vendorId, material, quantity, price);
+              Navigator.pop(context);
+            },
+            child: const Text('Place Order'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+
+
+
+
+
+/*
+import 'package:flutter/material.dart';
 
 class VendorOrdersScreen extends StatelessWidget {
   // Sample data for orders with additional details
@@ -259,3 +360,4 @@ class VendorOrdersScreen extends StatelessWidget {
     }
   }
 }
+*/

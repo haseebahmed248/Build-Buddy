@@ -3,41 +3,33 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:get/get.dart';
+import 'package:provider/provider.dart';
+import 'package:buildbuddy/Controllers/projectController.dart';
+import 'package:buildbuddy/Models/contractorModel.dart';
+import 'package:buildbuddy/Views/DashBoard/HomeOwner/myProjects.dart';
 
 class FindProfessionalsDashboard extends StatefulWidget {
   const FindProfessionalsDashboard({super.key});
 
   @override
-  State<FindProfessionalsDashboard> createState() =>
-      _FindProfessionalsDashboardState();
+  State<FindProfessionalsDashboard> createState() => _FindProfessionalsDashboardState();
 }
 
-class _FindProfessionalsDashboardState
-    extends State<FindProfessionalsDashboard> {
-  String selectedProfession = '';
+class _FindProfessionalsDashboardState extends State<FindProfessionalsDashboard> {
   String userLocation = 'Faisalabad, Punjab';
   Position? _currentPosition;
   LatLng _selectedLocation = LatLng(31.4504, 73.1350);
-  bool isSearching = false;
   TextEditingController _searchController = TextEditingController();
   final MapController _mapController = MapController();
-
-  final Map<String, List<Professional>> professionals = {
-    'Architects': [
-      Professional(name: 'John Doe', role: 'Architect', rating: 4.5),
-      Professional(name: 'Alice Green', role: 'Architect', rating: 4.7),
-    ],
-    'Contractors': [
-      Professional(name: 'Jane Smith', role: 'Contractor', rating: 4.8),
-      Professional(name: 'Robert Brown', role: 'Contractor', rating: 4.6),
-    ],
-  };
+  Contractor? _selectedProfessional;
+  String _selectedRole = 'Contractor'; // Default role
 
   Color _getProfessionColor(String profession) {
     switch (profession) {
-      case 'Architects':
+      case 'Architect':
         return const Color(0xFF2ECC71); // Bright Green
-      case 'Contractors':
+      case 'Contractor':
         return const Color(0xFF3498DB); // Bright Blue
       default:
         return const Color(0xFF95A5A6); // Gray
@@ -48,6 +40,9 @@ class _FindProfessionalsDashboardState
   void initState() {
     super.initState();
     _getCurrentLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ProjectController>(context, listen: false).loadContractors();
+    });
   }
 
   Future<void> _getCurrentLocation() async {
@@ -56,20 +51,30 @@ class _FindProfessionalsDashboardState
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      return Future.error('Location services are disabled.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location services are disabled.')),
+      );
+      return;
     }
 
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        return Future.error('Location permissions are denied');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permissions are denied.')),
+        );
+        return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      return Future.error(
-          'Location permissions are permanently denied, cannot request permissions.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Location permissions are permanently denied, cannot request permissions.')),
+      );
+      return;
     }
 
     final position = await Geolocator.getCurrentPosition(
@@ -87,8 +92,7 @@ class _FindProfessionalsDashboardState
       await placemarkFromCoordinates(latitude, longitude);
       Placemark place = placemarks[0];
       setState(() {
-        userLocation =
-        "${place.locality}, ${place.administrativeArea}"; // Format address
+        userLocation = "${place.locality}, ${place.administrativeArea}";
       });
     } catch (e) {
       print("Error fetching address: $e");
@@ -120,14 +124,13 @@ class _FindProfessionalsDashboardState
         child: FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCenter: _selectedLocation, // ✅ Updated API
-            initialZoom: 13.0, // ✅ Updated API
+            initialCenter: _selectedLocation,
+            initialZoom: 13.0,
             onTap: _onMapTap,
           ),
           children: [
             TileLayer(
-              urlTemplate:
-              'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
               subdomains: ['a', 'b', 'c'],
             ),
             MarkerLayer(
@@ -186,16 +189,93 @@ class _FindProfessionalsDashboardState
             padding: const EdgeInsets.all(16.0),
             child: _buildMap(),
           ),
-          if (selectedProfession.isNotEmpty)
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: professionals[selectedProfession]?.length ?? 0,
-                itemBuilder: (context, index) {
-                  final professional =
-                  professionals[selectedProfession]![index];
-                  return _buildProfessionalCard(professional);
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: DropdownButton<String>(
+              value: _selectedRole,
+              items: ['Contractor', 'Architect'].map((role) {
+                return DropdownMenuItem<String>(
+                  value: role,
+                  child: Text(role),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedRole = value!;
+                  _selectedProfessional = null; // Reset selection
+                });
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'Search by Name, Email, or Location',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (value) {
+                setState(() {});
+              },
+            ),
+          ),
+          Expanded(
+            child: Consumer<ProjectController>(
+              builder: (context, controller, _) {
+                if (controller.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (controller.contractors.isEmpty) {
+                  return const Center(child: Text('No professionals found.'));
+                }
+
+                final filteredProfessionals = controller.contractors
+                    .where((professional) =>
+                (professional.name.isNotEmpty &&
+                    professional.name
+                        .toLowerCase()
+                        .contains(_searchController.text.toLowerCase())) ||
+                    (professional.email?.isNotEmpty ?? false &&
+                        professional.email!
+                            .toLowerCase()
+                            .contains(_searchController.text.toLowerCase())) ||
+                    (professional.location?.isNotEmpty ?? false &&
+                        professional.location!
+                            .toLowerCase()
+                            .contains(_searchController.text.toLowerCase())))
+                    .where((professional) => professional.role == _selectedRole)
+                    .toList();
+                print("Filtered professionals: $filteredProfessionals");
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filteredProfessionals.length,
+                  itemBuilder: (context, index) {
+                    final professional = filteredProfessionals[index];
+                    return _buildProfessionalCard(professional);
+                  },
+                );
+              },
+            ),
+          ),
+          if (_selectedProfessional != null)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  Get.to(() => MyProjectsDashboard(
+                    userType: 'homeowner',
+                    selectedProfessionalId: _selectedProfessional!.uid,
+                    selectedProfessionalRole: _selectedProfessional!.role,
+                  ));
                 },
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  backgroundColor: Colors.blueAccent,
+                ),
+                child: const Text('Proceed to My Projects'),
               ),
             ),
         ],
@@ -203,46 +283,44 @@ class _FindProfessionalsDashboardState
     );
   }
 
-  Widget _buildProfessionalCard(Professional professional) {
+  Widget _buildProfessionalCard(Contractor professional) {
     return Card(
       elevation: 3,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListTile(
         leading: Icon(
-          professional.role == 'Architect'
-              ? Icons.architecture
-              : Icons.engineering,
+          professional.role == 'Architect' ? Icons.architecture : Icons.engineering,
           color: _getProfessionColor(professional.role),
         ),
         title: Text(professional.name),
-        subtitle: Text(professional.role),
-        trailing: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (professional.email != null)
+              Text('Email: ${professional.email}'),
+            if (professional.location != null)
+              Text('Location: ${professional.location}'),
+            Text('Rating: ${professional.rating.toStringAsFixed(1)} (${professional.reviewCount} reviews)'), // Show rating with 1 decimal place
+          ],
+        ),
+        trailing: ElevatedButton(
+          onPressed: () {
+            setState(() {
+              _selectedProfessional = professional;
+            });
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _selectedProfessional == professional
+                ? Colors.green
+                : Colors.blue,
           ),
           child: Text(
-            '${professional.rating}⭐',
-            style: const TextStyle(color: Colors.orange),
-          ),
+              _selectedProfessional == professional ? 'Selected' : 'Select'),
         ),
       ),
     );
   }
 }
-
-class Professional {
-  final String name;
-  final String role;
-  final double rating;
-
-  Professional({required this.name, required this.role, required this.rating});
-}
-
-
-
-
 
 
 

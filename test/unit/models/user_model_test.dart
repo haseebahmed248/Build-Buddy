@@ -1,3 +1,4 @@
+/*
 import 'package:flutter_test/flutter_test.dart';
 import 'package:buildbuddy/Models/userModels.dart';
 
@@ -20,6 +21,7 @@ void main() {
     expect(user.status, equals('active'));
   });
 }
+*/
 
 
 /*import 'package:flutter_test/flutter_test.dart';

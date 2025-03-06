@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../Controllers/authControllers.dart';
 import '../../Models/userModels.dart';
-import '../DashBoard/Admin.dart';
 import '../Shared/widgets/custom_button.dart';
 import '../Shared/widgets/input_field.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../Shared/widgets/auth_success_animation.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Added for auth access
 
 class AdminSignInScreen extends StatefulWidget {
   const AdminSignInScreen({super.key});
@@ -46,13 +46,62 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
   Future<bool> _isAdminCodeValid(String enteredCode) async {
     try {
       final DatabaseReference ref = FirebaseDatabase.instance.ref('admin_code');
-      final DataSnapshot snapshot = await ref.get();
+      print('Querying admin_code from Firebase with auth: ${FirebaseAuth.instance.currentUser?.email}');
+      final DataSnapshot snapshot = await ref.get().timeout(const Duration(seconds: 10));
 
-      return snapshot.exists &&
-          snapshot.value != null &&
-          snapshot.value.toString().trim() == enteredCode.trim();
+      if (!snapshot.exists) {
+        print("Admin code node not found in Firebase");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Admin code not configured. Contact support.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+
+      final storedCode = snapshot.value?.toString().trim() ?? '';
+      print("Admin code validation - Entered: '$enteredCode', Stored: '$storedCode'");
+
+      if (storedCode.isEmpty) {
+        print("Stored admin code is empty");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Admin code is not set in Firebase.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+
+      final isValid = storedCode == enteredCode.trim();
+      print("Admin code validation result: $isValid");
+      if (!isValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid admin code'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return isValid;
     } catch (error) {
       print("Admin code validation error: $error");
+      if (error is FirebaseException && error.code == 'permission-denied') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Permission denied accessing admin code. Check Firebase rules.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error validating admin code: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return false;
     }
   }
@@ -63,46 +112,63 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
     setState(() => _isLoading = true);
 
     try {
-      bool isAdminCodeValid =
-          await _isAdminCodeValid(_adminCodeController.text);
+      print('Attempting admin sign-in with email: ${_emailController.text}, password: [hidden], adminCode: ${_adminCodeController.text}');
+
+      int retryCount = 0;
+      const maxRetries = 3;
+      bool isAdminCodeValid = false;
+
+      while (retryCount < maxRetries && !isAdminCodeValid) {
+        isAdminCodeValid = await _isAdminCodeValid(_adminCodeController.text);
+        if (!isAdminCodeValid) {
+          if (retryCount == maxRetries - 1) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Invalid admin code or network error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            break;
+          }
+          retryCount++;
+          print('Retry attempt $retryCount for admin code validation');
+          await Future.delayed(const Duration(seconds: 2));
+        }
+      }
+
       if (!isAdminCodeValid) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid admin code'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        print('Admin code validation failed after retries');
         return;
       }
 
       final success = await _authController.signInWithEmail(
-        _emailController.text.trim(),
+        _emailController.text.trim().toLowerCase(),
         _passwordController.text,
       );
+
+      print('Sign-in result: success=$success, user=${_authController.currentUser.value?.email}, role=${_authController.currentUser.value?.role}, emailVerified=${_authController.currentUser.value?.emailVerified}');
 
       if (success && mounted) {
         final userData = _authController.currentUser.value;
         if (userData != null && userData.role == UserRole.admin) {
           if (_rememberMe) {
-            // Implement remember me functionality
-            // await _saveUserCredentials();
+            // Implement remember me functionality if needed
           }
 
-          // Show success animation
           await showDialog(
             context: context,
             barrierDismissible: false,
             builder: (context) => AuthSuccessAnimation(
               onAnimationComplete: () {
                 Navigator.pop(context);
-                Get.offAll(() => const AdminDashboard());
+                Get.offAllNamed('/admin-dashboard');
               },
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Access denied: Admin only'),
+            SnackBar(
+              content: Text('Access denied: Admin only or role issue - Role: ${userData?.role}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -110,12 +176,21 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
       }
     } catch (e) {
       print('Sign-in error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (e is FirebaseAuthException && (e.code == 'wrong-password' || e.code == 'user-not-found')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid email or password'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -126,7 +201,6 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background circles
           Positioned(
             top: -50,
             right: -70,
@@ -175,7 +249,6 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
               ),
             ),
           ),
-          // Sign-in form
           SafeArea(
             child: SingleChildScrollView(
               child: Padding(
@@ -217,11 +290,8 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
                         prefixIcon: Icons.lock_outline,
                         obscureText: _obscurePassword,
                         suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword
-                              ? Icons.visibility
-                              : Icons.visibility_off),
-                          onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
+                          icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                         ),
                         validator: (value) => value != null && value.length >= 8
                             ? null
@@ -233,17 +303,14 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
                         hintText: 'Admin Code',
                         prefixIcon: Icons.admin_panel_settings,
                         obscureText: true,
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Admin code is required'
-                            : null,
+                        validator: (value) => value == null || value.isEmpty ? 'Admin code is required' : null,
                       ),
                       const SizedBox(height: 10),
                       Row(
                         children: [
                           Checkbox(
                             value: _rememberMe,
-                            onChanged: (value) =>
-                                setState(() => _rememberMe = value ?? false),
+                            onChanged: (value) => setState(() => _rememberMe = value ?? false),
                           ),
                           const Text('Remember me'),
                         ],

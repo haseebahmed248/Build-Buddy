@@ -192,12 +192,14 @@ class HomeownerChatScreen extends StatelessWidget {
 /////////
 
 
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:buildbuddy/Controllers/authControllers.dart';
+import 'package:buildbuddy/Controllers/projectController.dart';
+import 'package:provider/provider.dart';
 import '../Shared/widgets/appBarColor.dart';
 import 'HomeOwner/chat/homeowner_chat_screen.dart';
+import 'package:buildbuddy/Models/projectModel.dart'; // Import for ProjectStatus
 
 class HomeOwnerDashboard extends StatefulWidget {
   const HomeOwnerDashboard({super.key});
@@ -223,6 +225,15 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
+    // Load stats after initial build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final user = _authController.currentUser.value;
+        if (user != null) {
+          Provider.of<ProjectController>(context, listen: false).loadProjects();
+        }
+      }
+    });
   }
 
   @override
@@ -233,36 +244,36 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
 
   Future<void> _handleSignOut() async {
     final bool confirm = await showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15)),
-              title: const Text('Sign Out',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              content: const Text('Are you sure you want to sign out?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel',
-                      style: TextStyle(color: Colors.grey)),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Sign Out',
-                      style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            );
-          },
-        ) ??
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15)),
+          title: const Text('Sign Out',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text('Are you sure you want to sign out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Sign Out',
+                  style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    ) ??
         false;
 
     if (confirm) {
@@ -376,8 +387,8 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
   Widget _buildBody(userData) {
     return RefreshIndicator(
       onRefresh: () async {
-        // Implement refresh logic here
-        await Future.delayed(const Duration(seconds: 1));
+        final controller = Provider.of<ProjectController>(context, listen: false);
+        await controller.loadProjects();
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -388,7 +399,7 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
             children: [
               _buildWelcomeCard(userData),
               const SizedBox(height: 24),
-              _buildQuickStats(),
+              _buildQuickStats(userData.uid),
               const SizedBox(height: 24),
               _buildSectionTitle('Quick Access'),
               const SizedBox(height: 16),
@@ -475,17 +486,31 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
     );
   }
 
-  Widget _buildQuickStats() {
-    return Row(
-      children: [
-        _buildStatCard(
-            'Active\nProjects', '3', Icons.construction, Colors.blue),
-        const SizedBox(width: 12),
-        _buildStatCard(
-            'Pending\nReviews', '2', Icons.rate_review, Colors.orange),
-        const SizedBox(width: 12),
-        _buildStatCard('New\nMessages', '5', Icons.message, Colors.green),
-      ],
+  Widget _buildQuickStats(String userId) {
+    return Consumer<ProjectController>(
+      builder: (context, controller, _) {
+        return Row(
+          children: [
+            _buildStatCard(
+                'Active\nProjects',
+                controller.activeProjectsCount.toString(),
+                Icons.construction,
+                Colors.blue),
+            const SizedBox(width: 12),
+            _buildStatCard(
+                'Pending\nReviews',
+                controller.pendingReviewsCount.toString(),
+                Icons.rate_review,
+                Colors.orange),
+            const SizedBox(width: 12),
+            _buildStatCard(
+                'New\nMessages',
+                controller.newMessagesCount.toString(),
+                Icons.message,
+                Colors.green),
+          ],
+        );
+      },
     );
   }
 
@@ -543,70 +568,6 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
     );
   }
 
-  /*Widget _buildDashboardGrid() {
-    final List<Map<String, dynamic>> items = [
-      {
-        'title': 'My Projects',
-        'icon': Icons.construction,
-        'color': const Color(0xFF2196F3),
-        'route': '/my-projects'
-      },
-      {
-        'title': 'Find Professionals',
-        'icon': Icons.people,
-        'color': const Color(0xFF4CAF50),
-        'route': '/find-professionals'
-      },
-      {
-        'title': 'Messages',
-        'icon': Icons.message,
-        'color': const Color(0xFFFFC107),
-        *//*'route': '/messages'*//*
-        //onTap: () => Get.to(() => HomeownerChatScreen()),
-
-      },
-      {
-        'title': 'Payments',
-        'icon': Icons.payments_outlined,
-        'color': const Color(0xFFE91E63),
-        'route': '/payments'
-      },
-      {
-        'title': 'Reviews',
-        'icon': Icons.star_border,
-        'color': const Color(0xFF9C27B0),
-        'route': '/rate-review'
-      },
-      {
-        'title': 'Support',
-        'icon': Icons.help_outline,
-        'color': const Color(0xFF607D8B),
-        'route': '/support'
-      },
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.3,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        return _buildDashboardCard(
-          items[index]['title'],
-          items[index]['icon'],
-          items[index]['color'],
-          () => Get.toNamed(items[index]['route']),
-        );
-      },
-    );
-  }*/
-
-
   Widget _buildDashboardGrid() {
     final List<Map<String, dynamic>> items = [
       {
@@ -625,7 +586,7 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
         'title': 'Messages',
         'icon': Icons.message,
         'color': const Color(0xFFFFC107),
-        'onTap': () => Get.to(() => HomeownerChatScreen()), // Modified this line
+        'onTap': () => Get.to(() => HomeownerChatScreen()),
       },
       {
         'title': 'Payments',
@@ -715,4 +676,3 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
     );
   }
 }
-

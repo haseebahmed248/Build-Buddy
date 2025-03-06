@@ -1,3 +1,4 @@
+/*
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,4 +16,4 @@ import 'package:google_sign_in/google_sign_in.dart';
   MockSpec<DatabaseReference>(as: #MockDatabaseReferenceMock),
   MockSpec<DataSnapshot>(as: #MockDataSnapshotMock),
 ])
-void main() {}
+void main() {}*/

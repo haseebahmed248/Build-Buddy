@@ -1,16 +1,19 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart'; // Add this for path inference
+
 enum UserRole {
   homeowner,
   contractor,
   architect,
   vendor,
-  admin
+  admin,
 }
 
 enum UserStatus {
   active,
   pending,
   suspended,
-  inactive
+  inactive,
 }
 
 class UserCredentials {
@@ -50,10 +53,12 @@ class UserData {
     this.status = 'active',
   });
 
-  // Convert UserData to JSON
+  // Convert UserData to JSON for Realtime Database
   Map<String, dynamic> toJson() {
     return {
+      'uid': uid,
       'email': email,
+      'role': role.name, // Convert enum to string for Firebase
       'displayName': displayName ?? '',
       'photoURL': photoURL ?? '',
       'phoneNumber': phoneNumber ?? '',
@@ -65,8 +70,24 @@ class UserData {
     };
   }
 
-  // Create UserData from JSON
-  factory UserData.fromJson(String uid, UserRole role, Map<String, dynamic> json) {
+  // Create UserData from JSON (Realtime Database snapshot) - Now asynchronous
+  static Future<UserData> fromJson(Map<String, dynamic> json, String uid) async {
+    // Log the JSON to debug role issues
+    print('Parsing UserData from JSON for UID $uid: $json');
+    final roleString = json['role'] as String?;
+    UserRole role;
+    if (roleString != null && roleString.isNotEmpty) {
+      try {
+        role = UserRole.values.firstWhere((r) => r.name == roleString);
+      } catch (e) {
+        print('Invalid role found in JSON for UID $uid: $roleString, inferring from path');
+        role = (await _inferRoleFromPath(uid)) ?? UserRole.homeowner; // Use path if JSON role is invalid
+      }
+    } else {
+      // Infer role from the path (e.g., if under user/contractor, assume contractor)
+      role = (await _inferRoleFromPath(uid)) ?? UserRole.homeowner; // Default to homeowner if path inference fails
+      print('No role field found in JSON for UID $uid, inferring from path: ${role.name}');
+    }
     return UserData(
       uid: uid,
       email: json['email'] ?? '',
@@ -82,6 +103,23 @@ class UserData {
     );
   }
 
+  // Helper method to infer role from the path (based on Firebase structure)
+  static Future<UserRole?> _inferRoleFromPath(String uid) async {
+    // Use FirebaseDatabase to check the path asynchronously
+    try {
+      for (var role in UserRole.values) {
+        final snapshot = await FirebaseDatabase.instance.ref('user/${role.name}/$uid').get();
+        if (snapshot.exists) {
+          return role;
+        }
+      }
+    } catch (e) {
+      print('Error inferring role from path for UID $uid: $e');
+      return null; // Return null if inference fails
+    }
+    return null; // Return null if no role is found
+  }
+
   // Create a copy of UserData with updated fields
   UserData copyWith({
     String? displayName,
@@ -90,11 +128,12 @@ class UserData {
     DateTime? lastLogin,
     bool? emailVerified,
     String? status,
+    UserRole? role,
   }) {
     return UserData(
       uid: uid,
       email: email,
-      role: role,
+      role: role ?? this.role,
       displayName: displayName ?? this.displayName,
       photoURL: photoURL ?? this.photoURL,
       phoneNumber: phoneNumber ?? this.phoneNumber,
@@ -213,30 +252,7 @@ class UserProfileUpdateData {
     final Map<String, dynamic> data = {};
     if (displayName != null) data['displayName'] = displayName;
     if (phoneNumber != null) data['phoneNumber'] = phoneNumber;
-    if (additionalInfo != null) data.addAll(additionalInfo!);
+    if (additionalInfo != null) data['additionalInfo'] = additionalInfo;
     return data;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

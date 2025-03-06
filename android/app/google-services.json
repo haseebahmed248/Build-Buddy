@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "872955660342",
+    "firebase_url": "https://buildbuddy-9375d-default-rtdb.firebaseio.com",
     "project_id": "buildbuddy-9375d",
     "storage_bucket": "buildbuddy-9375d.firebasestorage.app"
   },

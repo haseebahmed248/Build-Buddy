@@ -3,6 +3,8 @@ plugins {
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
     id "com.google.gms.google-services"
+   // id 'com.android.application' version '8.5.0' apply false
+    id 'org.jetbrains.kotlin.android' version '2.1.0' apply false
 }
 
 android {
@@ -16,7 +18,8 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17
+        jvmTarget = "17"
+
     }
 
     defaultConfig {
@@ -47,4 +50,5 @@ dependencies {
     implementation 'com.google.firebase:firebase-analytics'
     // Example Firebase dependency (e.g., Analytics)
     // implementation 'com.google.firebase:firebase-analytics'
+
 }

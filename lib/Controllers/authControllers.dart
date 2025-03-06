@@ -265,8 +265,10 @@ extension UserRoleExtension on UserRole {
 
 
 /////////
+/*
+
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart'; // Corrected import for GetX
 import 'package:buildbuddy/Services/auth/authService.dart';
 import 'package:buildbuddy/Models/userModels.dart';
 import 'package:flutter/material.dart';
@@ -275,6 +277,8 @@ import '../Views/DashBoard/Architect.dart';
 import '../Views/DashBoard/Constructor.dart';
 import '../Views/DashBoard/HomeOwner.dart';
 import '../Views/DashBoard/Vendor.dart';
+import 'package:provider/provider.dart'; // Import for ProjectController
+import 'projectController.dart'; // Adjust import path
 
 class AuthController extends GetxController {
   final AuthService _authService = AuthService();
@@ -291,7 +295,15 @@ class AuthController extends GetxController {
     // Listen to auth state changes
     _authService.userDataStream.listen((userData) {
       currentUser.value = userData;
+      if (userData != null) {
+        _updateProjectController(userData.uid, userData.role);
+        _navigateBasedOnRole(userData.role);
+      }
     });
+  }
+
+  Future<UserData?> getCurrentUserData() async {
+    return await _authService.getCurrentUserData();
   }
 
   // Updated email verification status method to match AuthService
@@ -354,6 +366,7 @@ class AuthController extends GetxController {
       );
 
       final response = await _authService.registerUser(registerData);
+      print('Registration response: $response');
 
       if (response.success) {
         currentUser.value = response.userData;
@@ -364,7 +377,10 @@ class AuthController extends GetxController {
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
-        _navigateBasedOnRole(response.userData?.role);
+        if (currentUser.value != null) {
+          _updateProjectController(currentUser.value!.uid, currentUser.value!.role);
+          _navigateBasedOnRole(currentUser.value!.role);
+        }
         return true;
       } else {
         errorMessage.value = response.message;
@@ -379,13 +395,15 @@ class AuthController extends GetxController {
       }
     } catch (e) {
       errorMessage.value = 'Registration failed';
+      print('Registration error: $e');
       return false;
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<bool> signInWithEmail(String email, String password) async {
+  */
+/*Future<bool> signInWithEmail(String email, String password) async {
     try {
       isLoading.value = true;
       errorMessage.value = '';
@@ -394,13 +412,26 @@ class AuthController extends GetxController {
         email: email,
         password: password,
       );
-      
 
       final response = await _authService.signInWithEmailAndPassword(credentials);
+      print('Sign-in response: $response');
 
       if (response.success) {
         currentUser.value = response.userData;
-        _navigateBasedOnRole(response.userData?.role);
+        if (currentUser.value == null) {
+          errorMessage.value = 'User profile not found. Please sign up or contact support.';
+          Get.snackbar(
+            'Error',
+            'User profile not found. Please sign up or contact support.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+          await _auth.signOut();
+          return false;
+        }
+        _updateProjectController(currentUser.value!.uid, currentUser.value!.role);
+        _navigateBasedOnRole(currentUser.value!.role);
         return true;
       } else {
         errorMessage.value = response.message;
@@ -414,13 +445,67 @@ class AuthController extends GetxController {
         return false;
       }
     } catch (e) {
-      errorMessage.value = 'An unexpected error occurred';
+      errorMessage.value = 'An unexpected error occurred: $e';
+      print('Sign-in error: $e');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }*//*
+
+// In AuthController.dart, update signInWithEmail
+  Future<bool> signInWithEmail(String email, String password) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      print('Attempting sign-in with email: $email, password: [hidden]');
+
+      final credentials = UserCredentials(
+        email: email,
+        password: password,
+      );
+
+      final response = await _authService.signInWithEmailAndPassword(credentials);
+      print('Sign-in response: $response');
+
+      if (response.success) {
+        currentUser.value = response.userData;
+        if (currentUser.value == null) {
+          errorMessage.value = 'User profile not found. Please sign up or contact support.';
+          Get.snackbar(
+            'Error',
+            'User profile not found. Please sign up or contact support.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+          await _auth.signOut();
+          return false;
+        }
+        print('User signed in: email=${currentUser.value?.email}, role=${currentUser.value?.role}, emailVerified=${currentUser.value?.emailVerified}');
+        _updateProjectController(currentUser.value!.uid, currentUser.value!.role);
+        _navigateBasedOnRole(currentUser.value!.role);
+        return true;
+      } else {
+        errorMessage.value = response.message;
+        Get.snackbar(
+          'Error',
+          response.message,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      errorMessage.value = 'An unexpected error occurred: $e';
+      print('Sign-in error: $e');
       return false;
     } finally {
       isLoading.value = false;
     }
   }
-
   Future<bool> signInWithGoogle(UserRole role) async {
     try {
       isLoading.value = true;
@@ -431,6 +516,7 @@ class AuthController extends GetxController {
       if (response.success) {
         currentUser.value = response.userData;
         if (currentUser.value != null) {
+          _updateProjectController(currentUser.value!.uid, currentUser.value!.role);
           _navigateBasedOnRole(currentUser.value!.role);
         }
         return true;
@@ -447,10 +533,18 @@ class AuthController extends GetxController {
       }
     } catch (e) {
       errorMessage.value = 'Google sign in failed';
+      print('Google sign-in error: $e');
       return false;
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void _updateProjectController(String userId, UserRole role) {
+    print('Updating ProjectController for userId: $userId, role: ${role.name}');
+    final projectController = Provider.of<ProjectController>(Get.context!, listen: false);
+    projectController.updateUserType(role.name); // Use role.name as userType
+    projectController.loadProjects(); // Reload projects with the new role
   }
 
   void _navigateBasedOnRole(UserRole? role) {
@@ -467,6 +561,7 @@ class AuthController extends GetxController {
 
     Widget? dashboard;
     try {
+      print('Navigating to dashboard for role: ${role.name}');
       switch (role) {
         case UserRole.homeowner:
           dashboard = const HomeOwnerDashboard();
@@ -481,7 +576,7 @@ class AuthController extends GetxController {
           dashboard = VendorDashboard();
           break;
         case UserRole.admin:
-          dashboard = const AdminDashboard();
+          dashboard = AdminDashboard();
           break;
       }
 
@@ -495,7 +590,7 @@ class AuthController extends GetxController {
     } catch (e) {
       Get.snackbar(
         'Navigation Error',
-        'Error navigating to dashboard. Please try again.',
+        'Error navigating to dashboard. Please try again: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
@@ -528,6 +623,10 @@ class AuthController extends GetxController {
       isLoading.value = true;
       final userData = await _authService.getCurrentUserData();
       currentUser.value = userData;
+      if (userData != null) {
+        _updateProjectController(userData.uid, userData.role);
+        _navigateBasedOnRole(userData.role);
+      }
     } catch (e) {
       errorMessage.value = 'Failed to fetch user data';
     } finally {
@@ -546,10 +645,7 @@ class AuthController extends GetxController {
     errorMessage.value = '';
   }
 }
-
-
-
-
+*/
 
 //////
 
@@ -930,7 +1026,406 @@ Future<void> updateEmailVerificationStatus() async {
 
 */
 
+////////
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:get/get.dart';
+import 'package:buildbuddy/Services/auth/authService.dart';
+import 'package:buildbuddy/Models/userModels.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../Views/DashBoard/Admin.dart';
+import '../Views/DashBoard/Architect.dart';
+import '../Views/DashBoard/Constructor.dart';
+import '../Views/DashBoard/HomeOwner.dart';
+import '../Views/DashBoard/Vendor.dart';
+import 'projectController.dart'; // Adjust import path
+
+/// Manages authentication, user-related functionality, and user list for the BuildBuddy app.
+/// Aligns with SRS 3.2.3 (Security), 3.2.1 (Performance), 3.2.2 (Usability), and 3.2.4 (Reliability).
+class AuthController extends GetxController {
+  final AuthService _authService = AuthService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final DatabaseReference _database = FirebaseDatabase.instance.ref();
+
+  // Observable values
+  final Rx<UserData?> currentUser = Rx<UserData?>(null);
+  final RxBool isLoading = false.obs;
+  final RxString errorMessage = ''.obs;
+  final RxList<UserData> _users = <UserData>[].obs; // Observable list of all users
+
+  List<UserData> get users => _users; // Getter for all users
+
+  StreamSubscription? _authStateSubscription;
+  StreamSubscription? _usersSubscription;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // Listen to auth state changes
+    _authStateSubscription = _auth.authStateChanges().listen(_onAuthStateChanged);
+    _startUsersListener(); // Start listening for all users
+  }
+
+  /// Handles authentication state changes, updating the current user and notifying listeners.
+  void _onAuthStateChanged(User? firebaseUser) async {
+    isLoading.value = true;
+    try {
+      if (firebaseUser != null) {
+        final snapshot = await _database.child('user').get();
+        if (snapshot.exists) {
+          final data = snapshot.value as Map<dynamic, dynamic>?;
+          if (data != null) {
+            String? userRole;
+            data.forEach((role, users) {
+              if (users is Map && users.containsKey(firebaseUser.uid)) {
+                userRole = role;
+              }
+            });
+            if (userRole != null) {
+              final userData = await UserData.fromJson(
+                  Map<String, dynamic>.from(data[userRole][firebaseUser.uid] as Map), firebaseUser.uid);
+              currentUser.value = userData;
+              _updateProjectController(userData.uid, userData.role);
+              _navigateBasedOnRole(userData.role);
+            }
+          }
+        }
+      } else {
+        currentUser.value = null;
+      }
+    } catch (e) {
+      errorMessage.value = 'Failed to load user data: $e';
+      Get.snackbar(
+        'Error',
+        'Failed to load user data: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Starts real-time listener for all users, ensuring performance (SRS 3.2.1) and usability (SRS 3.2.2).
+  void _startUsersListener() {
+    _usersSubscription = _database.child('user').onValue.listen((event) {
+      if (event.snapshot.exists) {
+        final data = event.snapshot.value as Map<dynamic, dynamic>?;
+        if (data != null) {
+          _users.clear();
+          data.forEach((role, users) {
+            if (users is Map) {
+              users.forEach((uid, userData) async {
+                if (userData is Map) {
+                  try {
+                    final user = await UserData.fromJson(
+                        Map<String, dynamic>.from(userData), uid as String);
+                    _users.add(user);
+                  } catch (e) {
+                    print('Error parsing user $uid: $e');
+                  }
+                }
+              });
+            }
+          });
+          _users.sort((a, b) => a.email.compareTo(b.email));
+        }
+      }
+    }, onError: (error) {
+      errorMessage.value = 'Failed to load users: $error';
+      Get.snackbar(
+        'Error',
+        'Failed to load users: $error',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    });
+  }
+
+  /// Signs in a user with email and password, ensuring security (SRS 3.2.3).
+  Future<bool> signInWithEmail(String email, String password) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      print('Attempting sign-in with email: $email, password: [hidden]');
+
+      final credentials = UserCredentials(
+        email: email,
+        password: password,
+      );
+
+      final response = await _authService.signInWithEmailAndPassword(credentials);
+      print('Sign-in response: $response');
+
+      if (response.success) {
+        currentUser.value = response.userData;
+        if (currentUser.value == null) {
+          errorMessage.value = 'User profile not found. Please sign up or contact support.';
+          Get.snackbar(
+            'Error',
+            'User profile not found. Please sign up or contact support.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+          await _auth.signOut();
+          return false;
+        }
+        print('User signed in: email=${currentUser.value?.email}, role=${currentUser.value?.role}, emailVerified=${currentUser.value?.emailVerified}');
+        _updateProjectController(currentUser.value!.uid, currentUser.value!.role);
+        _navigateBasedOnRole(currentUser.value!.role);
+        return true;
+      } else {
+        errorMessage.value = response.message;
+        Get.snackbar(
+          'Error',
+          response.message,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      errorMessage.value = 'An unexpected error occurred: $e';
+      print('Sign-in error: $e');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Signs up a new user with email and password, ensuring security (SRS 3.2.3).
+  Future<bool> registerUser({
+    required String email,
+    required String password,
+    required UserRole role,
+  }) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      final registerData = RegisterUserData(
+        email: email,
+        password: password,
+        role: role,
+      );
+
+      final response = await _authService.registerUser(registerData);
+      print('Registration response: $response');
+
+      if (response.success) {
+        currentUser.value = response.userData;
+        Get.snackbar(
+          'Success',
+          response.message,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+        if (currentUser.value != null) {
+          _updateProjectController(currentUser.value!.uid, currentUser.value!.role);
+          _navigateBasedOnRole(currentUser.value!.role);
+        }
+        return true;
+      } else {
+        errorMessage.value = response.message;
+        Get.snackbar(
+          'Error',
+          response.message,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      errorMessage.value = 'Registration failed';
+      print('Registration error: $e');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Signs in with Google, ensuring security (SRS 3.2.3).
+  Future<bool> signInWithGoogle(UserRole role) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      final response = await _authService.signInWithGoogle(role);
+
+      if (response.success) {
+        currentUser.value = response.userData;
+        if (currentUser.value != null) {
+          _updateProjectController(currentUser.value!.uid, currentUser.value!.role);
+          _navigateBasedOnRole(currentUser.value!.role);
+        }
+        return true;
+      } else {
+        errorMessage.value = response.message;
+        Get.snackbar(
+          'Error',
+          response.message,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      errorMessage.value = 'Google sign in failed';
+      print('Google sign-in error: $e');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Updates the ProjectController with the user's role and ID, ensuring usability (SRS 3.2.2).
+  void _updateProjectController(String userId, UserRole role) {
+    print('Updating ProjectController for userId: $userId, role: ${role.name}');
+    final projectController = Provider.of<ProjectController>(Get.context!, listen: false);
+    projectController.updateUserType(role.name); // Use role.name as userType
+    projectController.loadProjects(); // Reload projects with the new role
+  }
+
+  /// Navigates to the appropriate dashboard based on the user's role, ensuring usability (SRS 3.2.2).
+  void _navigateBasedOnRole(UserRole? role) {
+    if (role == null) {
+      Get.snackbar(
+        'Error',
+        'Role is null. Please log in again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    Widget? dashboard;
+    try {
+      print('Navigating to dashboard for role: ${role.name}');
+      switch (role) {
+        case UserRole.homeowner:
+          dashboard = const HomeOwnerDashboard();
+          break;
+        case UserRole.contractor:
+          dashboard = ContractorDashboard();
+          break;
+        case UserRole.architect:
+          dashboard = const ArchitectDashboard();
+          break;
+        case UserRole.vendor:
+          dashboard = const VendorDashboard();
+          break;
+        case UserRole.admin:
+          dashboard = const AdminDashboard();
+          break;
+      }
+
+      if (dashboard != null) {
+        Get.offAll(
+              () => dashboard!,
+          transition: Transition.fade,
+          duration: const Duration(milliseconds: 500),
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Navigation Error',
+        'Error navigating to dashboard. Please try again: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  /// Signs out the current user, ensuring security (SRS 3.2.3).
+  Future<void> signOut() async {
+    try {
+      isLoading.value = true;
+      await _authService.signOut();
+      currentUser.value = null;
+      Get.offAllNamed('/stakeholder');
+    } catch (e) {
+      errorMessage.value = 'Sign out failed';
+      Get.snackbar(
+        'Error',
+        'Failed to sign out',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Checks the current user and navigates accordingly, ensuring usability (SRS 3.2.2).
+  Future<void> checkCurrentUser() async {
+    try {
+      isLoading.value = true;
+      final userData = await _authService.getCurrentUserData();
+      currentUser.value = userData;
+      if (userData != null) {
+        _updateProjectController(userData.uid, userData.role);
+        _navigateBasedOnRole(userData.role);
+      }
+    } catch (e) {
+      errorMessage.value = 'Failed to fetch user data';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Checks if the user is authenticated, ensuring security (SRS 3.2.3).
+  bool get isAuthenticated => currentUser.value != null;
+
+  /// Checks if the user's email is verified, ensuring security (SRS 3.2.3).
+  bool get isEmailVerified => currentUser.value?.emailVerified ?? false;
+
+  /// Checks if email verification is required for the user's role, ensuring security (SRS 3.2.3).
+  bool get requiresEmailVerification =>
+      currentUser.value != null &&
+          [UserRole.contractor, UserRole.architect, UserRole.vendor]
+              .contains(currentUser.value!.role);
+
+  /// Clears any error messages, ensuring usability (SRS 3.2.2).
+  void clearError() {
+    errorMessage.value = '';
+  }
+
+  /// Cleans up resources, ensuring reliability (SRS 3.2.4).
+  @override
+  void onClose() {
+    _authStateSubscription?.cancel();
+    _usersSubscription?.cancel();
+    super.onClose();
+  }
+}
 
 
 
