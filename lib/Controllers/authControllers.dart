@@ -1083,7 +1083,7 @@ class AuthController extends GetxController {
   }
 
   /// Handles authentication state changes, updating the current user and notifying listeners.
-  void _onAuthStateChanged(User? firebaseUser) async {
+  /*void _onAuthStateChanged(User? firebaseUser) async {
     isLoading.value = true;
     try {
       if (firebaseUser != null) {
@@ -1104,6 +1104,73 @@ class AuthController extends GetxController {
               _updateProjectController(userData.uid, userData.role);
               _navigateBasedOnRole(userData.role);
             }
+          }
+        }
+      } else {
+        currentUser.value = null;
+      }
+    } catch (e) {
+      errorMessage.value = 'Failed to load user data: $e';
+      Get.snackbar(
+        'Error',
+        'Failed to load user data: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }*/
+  void _onAuthStateChanged(User? firebaseUser) async {
+    isLoading.value = true;
+    try {
+      if (firebaseUser != null) {
+        final snapshot = await _database.child('user').get();
+        if (snapshot.exists) {
+          final data = snapshot.value as Map<dynamic, dynamic>?;
+          if (data != null) {
+            String? userRole;
+            data.forEach((role, users) {
+              if (users is Map && users.containsKey(firebaseUser.uid)) {
+                userRole = role;
+              }
+            });
+            if (userRole != null) {
+              final userDataMap = Map<String, dynamic>.from(data[userRole][firebaseUser.uid] as Map);
+              final userData = await UserData.fromJson(userDataMap, firebaseUser.uid);
+              // Force admin role if signing in via admin screen context by using copyWith
+              if (Get.currentRoute.contains('/admin-signin') && firebaseUser.email != null) {
+                final updatedUserData = userData.copyWith(
+                  role: UserRole.admin,
+                  lastLogin: DateTime.now(), // Update last login time
+                );
+                await _database.child('user/admin/${firebaseUser.uid}').set(updatedUserData.toJson());
+                currentUser.value = updatedUserData;
+              } else {
+                currentUser.value = userData;
+              }
+              _updateProjectController(currentUser.value!.uid, currentUser.value!.role);
+              _navigateBasedOnRole(currentUser.value!.role);
+            }
+          }
+        } else {
+          // If no user data exists, create admin entry for admin sign-in
+          if (Get.currentRoute.contains('/admin-signin') && firebaseUser.email != null) {
+            final userData = UserData(
+              uid: firebaseUser.uid,
+              email: firebaseUser.email!,
+              role: UserRole.admin,
+              emailVerified: firebaseUser.emailVerified,
+              provider: 'password', // Default provider
+              createdAt: DateTime.now(), // Default creation time
+              lastLogin: DateTime.now(), // Default last login time
+              status: 'active', // Default status
+            );
+            await _database.child('user/admin/${firebaseUser.uid}').set(userData.toJson());
+            currentUser.value = userData;
+            _updateProjectController(userData.uid, userData.role);
+            _navigateBasedOnRole(userData.role);
           }
         }
       } else {

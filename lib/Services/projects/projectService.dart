@@ -1,6 +1,9 @@
+// lib/Services/projects/projectService.dart
 import 'package:firebase_database/firebase_database.dart';
 import 'package:buildbuddy/Models/projectModel.dart';
+import 'package:buildbuddy/Models/Professional.dart';
 import 'package:buildbuddy/Models/contractorModel.dart';
+import 'package:buildbuddy/Models/architectModel.dart';
 
 class ProjectService {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
@@ -42,12 +45,12 @@ class ProjectService {
     }
   }
 
-  Future<List<Contractor>> getContractors() async {
+  Future<List<Professional>> getContractors() async {
     try {
       final snapshot = await _database.child('user/contractor').get();
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<String, dynamic>.from(snapshot.value as Map);
-        final List<Contractor> contractors = [];
+        final List<Professional> contractors = [];
         data.forEach((contractorId, contractorData) {
           if (contractorData is Map) {
             final contractorMap = Map<String, dynamic>.from(contractorData);
@@ -68,7 +71,33 @@ class ProjectService {
     }
   }
 
-  Future<List<Contractor>> getProfessionalsForUser(String userId) async {
+  Future<List<Professional>> getArchitects() async {
+    try {
+      final snapshot = await _database.child('user/architect').get();
+      if (snapshot.exists && snapshot.value != null) {
+        final data = Map<String, dynamic>.from(snapshot.value as Map);
+        final List<Professional> architects = [];
+        data.forEach((architectId, architectData) {
+          if (architectData is Map) {
+            final architectMap = Map<String, dynamic>.from(architectData);
+            architectMap['uid'] = architectId;
+            try {
+              architects.add(Architect.fromMap(architectMap));
+            } catch (e) {
+              print('Error parsing architect $architectId: $e');
+            }
+          }
+        });
+        return architects;
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching architects: $e');
+      throw Exception('Failed to fetch architects: $e');
+    }
+  }
+
+  Future<List<Professional>> getProfessionalsForUser(String userId) async {
     try {
       final snapshot = await _database.child('projects').orderByChild('userId').equalTo(userId).get();
       if (snapshot.exists && snapshot.value != null) {
@@ -88,10 +117,10 @@ class ProjectService {
           }
         });
 
-        final List<Contractor> professionals = [];
+        final List<Professional> professionals = [];
         for (String id in professionalIds) {
+          // Fetch contractor
           final contractorSnapshot = await _database.child('user/contractor/$id').get();
-          final architectSnapshot = await _database.child('user/architect/$id').get();
           if (contractorSnapshot.exists && contractorSnapshot.value != null) {
             final contractorData = Map<String, dynamic>.from(contractorSnapshot.value as Map);
             contractorData['uid'] = id;
@@ -100,11 +129,16 @@ class ProjectService {
             } catch (e) {
               print('Error parsing contractor $id: $e');
             }
-          } else if (architectSnapshot.exists && architectSnapshot.value != null) {
+            continue; // Skip architect check if contractor is found
+          }
+
+          // Fetch architect
+          final architectSnapshot = await _database.child('user/architect/$id').get();
+          if (architectSnapshot.exists && architectSnapshot.value != null) {
             final architectData = Map<String, dynamic>.from(architectSnapshot.value as Map);
             architectData['uid'] = id;
             try {
-              professionals.add(Contractor.fromMap(architectData));
+              professionals.add(Architect.fromMap(architectData));
             } catch (e) {
               print('Error parsing architect $id: $e');
             }
@@ -263,7 +297,6 @@ class ProjectService {
     }
   }
 }
-
 
 
 

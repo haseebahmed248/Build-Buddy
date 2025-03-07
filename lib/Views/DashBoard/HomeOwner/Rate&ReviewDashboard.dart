@@ -1,10 +1,14 @@
+// lib/Views/RateReviewDashboard.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:buildbuddy/Controllers/projectController.dart';
-import 'package:buildbuddy/Models/contractorModel.dart';
+import 'package:buildbuddy/Models/Professional.dart'; // Updated import
 import 'package:buildbuddy/Models/projectModel.dart';
+
+import '../../../Models/architectModel.dart';
+import '../../../Models/contractorModel.dart';
 
 class RateReviewDashboard extends StatefulWidget {
   const RateReviewDashboard({Key? key}) : super(key: key);
@@ -14,13 +18,12 @@ class RateReviewDashboard extends StatefulWidget {
 }
 
 class _RateReviewDashboardState extends State<RateReviewDashboard> {
-  late List<Contractor> _professionals = [];
+  late List<Professional>? _professionals = []; // Changed to List<Professional>? and initialized as empty list
   final TextEditingController _reviewController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Do not call _loadProfessionals here to avoid build phase issues
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _loadProfessionals();
@@ -39,13 +42,19 @@ class _RateReviewDashboardState extends State<RateReviewDashboard> {
   }
 
   void _saveReview(int professionalIndex, int rating) {
-    final professional = _professionals[professionalIndex];
+    final professional = _professionals?[professionalIndex]; // Handle nullability
+    if (professional == null) return; // Exit if professional is null
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final projects = Provider.of<ProjectController>(context, listen: false).projects;
       final project = projects.firstWhere(
-              (p) => p.assignedContractorId == professional.uid || p.assignedArchitectId == professional.uid,
-          orElse: () => projects.firstWhere((p) => p.status == ProjectStatus.completed && !(p.reviewed ?? false)));
+            (p) => p.assignedContractorId == professional.uid || p.assignedArchitectId == professional.uid,
+        orElse: () => projects.firstWhere(
+              (p) => p.status == ProjectStatus.completed && !(p.reviewed ?? false),
+          orElse: () => throw Exception('No eligible project found for review'),
+        ),
+      );
 
       Provider.of<ProjectController>(context, listen: false).saveReview(
         project.id,
@@ -56,7 +65,18 @@ class _RateReviewDashboardState extends State<RateReviewDashboard> {
       );
       _reviewController.clear();
       setState(() {
-        _professionals[professionalIndex] = professional.copyWith(rating: rating.toDouble(), reviewCount: (professional.reviewCount + 1));
+        // Update the professional's rating and review count based on type
+        if (professional is Contractor) {
+          _professionals?[professionalIndex] = professional.copyWith(
+            rating: rating.toDouble(),
+            reviewCount: professional.reviewCount + 1,
+          );
+        } else if (professional is Architect) {
+          _professionals?[professionalIndex] = professional.copyWith(
+            rating: rating.toDouble(),
+            reviewCount: professional.reviewCount + 1,
+          );
+        }
       });
     }
   }
@@ -104,8 +124,8 @@ class _RateReviewDashboardState extends State<RateReviewDashboard> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        const Color(0xFF1E3799), // Deep Blue
-                        const Color(0xFF4834DF), // Royal Blue
+                        const Color(0xFF1E3799),
+                        const Color(0xFF4834DF),
                       ],
                     ),
                     boxShadow: [
@@ -178,14 +198,14 @@ class _RateReviewDashboardState extends State<RateReviewDashboard> {
 
                 // Professionals List
                 Expanded(
-                  child: _professionals.isEmpty
+                  child: _professionals == null || _professionals!.isEmpty
                       ? const Center(child: CircularProgressIndicator())
                       : ListView.builder(
                     physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.all(16),
-                    itemCount: _professionals.length,
+                    itemCount: _professionals!.length,
                     itemBuilder: (context, index) {
-                      final professional = _professionals[index];
+                      final professional = _professionals![index];
                       return Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
@@ -231,7 +251,7 @@ class _RateReviewDashboardState extends State<RateReviewDashboard> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          professional.name,
+                                          professional.name ?? 'Unnamed Professional',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 16,
@@ -330,12 +350,12 @@ class _RateReviewDashboardState extends State<RateReviewDashboard> {
     );
   }
 
-  void _showReviewDialog(Contractor professional, int index) {
+  void _showReviewDialog(Professional professional, int index) { // Changed parameter type to Professional
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: Text('Review for ${professional.name}'),
+        title: Text('Review for ${professional.name ?? 'Unnamed Professional'}'),
         content: TextField(
           controller: _reviewController,
           decoration: const InputDecoration(
@@ -362,31 +382,6 @@ class _RateReviewDashboardState extends State<RateReviewDashboard> {
           ),
         ],
       ),
-    );
-  }
-}
-
-// Extension for copying Contractor with updated rating
-extension ContractorCopyWith on Contractor {
-  Contractor copyWith({
-    String? uid,
-    String? name,
-    String? location,
-    String? email,
-    String? phoneNumber,
-    double? rating,
-    int? reviewCount,
-    String? role,
-  }) {
-    return Contractor(
-      uid: uid ?? this.uid,
-      name: name ?? this.name,
-      location: location ?? this.location,
-      email: email ?? this.email,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
-      rating: rating ?? this.rating,
-      reviewCount: reviewCount ?? this.reviewCount,
-      role: role ?? this.role,
     );
   }
 }

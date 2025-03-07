@@ -1,45 +1,62 @@
-class Contractor {
-  final String uid;
-  final String name; // Maps to displayName in Firebase
-  final String? location; // Optional, default to empty if not present
-  final String? email; // Optional, maps to email in Firebase
-  final String? phoneNumber; // Optional, maps to phoneNumber in Firebase
-  final double rating; // Rating from reviews (default to 0.0 if not present)
-  final int reviewCount; // Number of reviews (default to 0 if not present)
-  final String role; // Contractor or Architect
+// lib/Models/contractorModel.dart
+import 'package:buildbuddy/Models/Professional.dart';
+
+class Contractor extends Professional {
+  final List<String>? certifications;
 
   Contractor({
-    required this.uid,
-    required this.name,
-    this.location,
-    this.email,
-    this.phoneNumber,
-    this.rating = 0.0,
-    this.reviewCount = 0,
-    required this.role,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'uid': uid,
-    'name': name,
-    'location': location ?? '',
-    'email': email,
-    'phoneNumber': phoneNumber,
-    'rating': rating,
-    'reviewCount': reviewCount,
-    'role': role,
-  };
+    required super.uid,
+    super.name,
+    super.location,
+    super.email,
+    super.phoneNumber,
+    super.rating,
+    super.reviewCount,
+    this.certifications,
+  }) : super(role: 'Contractor');
 
   factory Contractor.fromMap(Map<String, dynamic> map) {
     return Contractor(
       uid: map['uid'] ?? '',
-      name: map['displayName'] ?? '', // Map displayName to name
-      location: map['location'] as String?, // Optional
-      email: map['email'] as String?, // Optional
-      phoneNumber: map['phoneNumber'] as String?, // Optional
-      rating: (map['rating'] as num?)?.toDouble() ?? 0.0, // Default to 0.0
-      reviewCount: (map['reviewCount'] as int?) ?? 0, // Default to 0
-      role: map['role'] ?? 'Contractor', // Default to Contractor if not specified
+      name: map['displayName'] ?? '',
+      location: map['location'] as String?,
+      email: map['email'] as String?,
+      phoneNumber: map['phoneNumber'] as String?,
+      rating: (map['rating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: (map['reviewCount'] as int?) ?? 0,
+      certifications: (map['certifications'] as List<dynamic>?)?.cast<String>(),
+    );
+  }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      ...super.toMap(),
+      'certifications': certifications,
+    };
+  }
+
+  @override
+  Contractor copyWith({
+    String? uid,
+    String? name,
+    String? location,
+    String? email,
+    String? phoneNumber,
+    double? rating,
+    int? reviewCount,
+    String? role, // Required to match Professional.copyWith
+    List<String>? certifications, // Additional parameter for Contractor
+  }) {
+    return Contractor(
+      uid: uid ?? this.uid,
+      name: name ?? this.name,
+      location: location ?? this.location,
+      email: email ?? this.email,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      rating: rating ?? this.rating,
+      reviewCount: reviewCount ?? this.reviewCount,
+      certifications: certifications ?? this.certifications,
     );
   }
 }

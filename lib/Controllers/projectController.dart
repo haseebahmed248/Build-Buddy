@@ -1,10 +1,13 @@
+// lib/Controllers/projectController.dart
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:buildbuddy/Models/projectModel.dart';
+import 'package:buildbuddy/Models/Professional.dart';
 import 'package:buildbuddy/Models/contractorModel.dart';
+import 'package:buildbuddy/Models/architectModel.dart';
 import 'package:buildbuddy/Services/projects/projectService.dart';
 
 class ProjectController extends ChangeNotifier {
@@ -13,8 +16,7 @@ class ProjectController extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   List<Project> _projects = [];
-  List<Contractor> _contractors = [];
-  List<Contractor> _architects = [];
+  List<Professional> _professionals = []; // Unified list
   bool _isLoading = false;
   String _userType = 'homeowner';
   int _activeProjectsCount = 0;
@@ -23,8 +25,7 @@ class ProjectController extends ChangeNotifier {
   String? _errorMessage;
 
   StreamSubscription? _projectsSubscription;
-  StreamSubscription? _contractorsSubscription;
-  StreamSubscription? _architectsSubscription;
+  StreamSubscription? _professionalsSubscription; // Unified subscription
   final Map<String, StreamSubscription> _messageSubscriptions = {};
 
   ProjectController(String userType)
@@ -34,8 +35,7 @@ class ProjectController extends ChangeNotifier {
   }
 
   List<Project> get projects => _projects;
-  List<Contractor> get contractors => _contractors;
-  List<Contractor> get architects => _architects;
+  List<Professional> get professionals => _professionals; // Updated getter
   bool get isLoading => _isLoading;
   String get userType => _userType;
   int get activeProjectsCount => _activeProjectsCount;
@@ -52,8 +52,7 @@ class ProjectController extends ChangeNotifier {
       print('Updating userType from $_userType to $newUserType');
       _userType = newUserType;
       _projects.clear();
-      _contractors.clear();
-      _architects.clear();
+      _professionals.clear();
       _errorMessage = null;
       _startRealTimeListeners();
       notifyListeners();
@@ -100,7 +99,6 @@ class ProjectController extends ChangeNotifier {
             projectMap['id'] = projectId;
             try {
               final project = Project.fromMap(projectMap);
-              // Verify the user has access based on role
               if (_userType == 'homeowner' && project.userId == user.uid ||
                   _userType == 'contractor' && project.assignedContractorId == user.uid ||
                   _userType == 'architect' && project.assignedArchitectId == user.uid) {
@@ -140,63 +138,41 @@ class ProjectController extends ChangeNotifier {
     });
 
     if (_userType == 'homeowner') {
-      _contractorsSubscription = _database.child('user/contractor').onValue.listen((event) {
-        print('Contractors listener triggered: snapshot exists=${event.snapshot.exists}');
+      _professionalsSubscription = _database.child('user').onValue.listen((event) {
+        print('Professionals listener triggered: snapshot exists=${event.snapshot.exists}');
         if (event.snapshot.exists && event.snapshot.value != null) {
           final data = event.snapshot.value as Map<dynamic, dynamic>;
-          _contractors.clear();
-          data.forEach((contractorId, contractorData) {
-            if (contractorData is Map) {
-              final contractorMap = Map<String, dynamic>.from(contractorData);
-              contractorMap['uid'] = contractorId;
-              try {
-                _contractors.add(Contractor.fromMap(contractorMap));
-                print('Adding contractor: $contractorId');
-              } catch (e) {
-                _errorMessage = 'Error parsing contractor $contractorId: $e';
-                print(_errorMessage);
-              }
+          _professionals.clear();
+          data.forEach((type, typeData) {
+            if (typeData is Map && (type == 'contractor' || type == 'architect')) {
+              typeData.forEach((uid, professionalData) {
+                if (professionalData is Map) {
+                  final professionalMap = Map<String, dynamic>.from(professionalData);
+                  professionalMap['uid'] = uid;
+                  try {
+                    if (type == 'contractor') {
+                      _professionals.add(Contractor.fromMap(professionalMap));
+                    } else if (type == 'architect') {
+                      _professionals.add(Architect.fromMap(professionalMap));
+                    }
+                    print('Adding professional: $uid, type: $type');
+                  } catch (e) {
+                    _errorMessage = 'Error parsing professional $uid: $e';
+                    print(_errorMessage);
+                  }
+                }
+              });
             }
           });
-          print('Final contractors list: ${_contractors.length} contractors');
+          print('Final professionals list: ${_professionals.length} professionals');
           notifyListeners();
         }
       }, onError: (error) {
-        _errorMessage = 'Error loading contractors: $error';
+        _errorMessage = 'Error loading professionals: $error';
         print(_errorMessage);
         Get.snackbar('Warning', _errorMessage!,
             snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange);
-        _contractors.clear();
-        notifyListeners();
-      });
-
-      _architectsSubscription = _database.child('user/architect').onValue.listen((event) {
-        print('Architects listener triggered: snapshot exists=${event.snapshot.exists}');
-        if (event.snapshot.exists && event.snapshot.value != null) {
-          final data = event.snapshot.value as Map<dynamic, dynamic>;
-          _architects.clear();
-          data.forEach((architectId, architectData) {
-            if (architectData is Map) {
-              final architectMap = Map<String, dynamic>.from(architectData);
-              architectMap['uid'] = architectId;
-              try {
-                _architects.add(Contractor.fromMap(architectMap));
-                print('Adding architect: $architectId');
-              } catch (e) {
-                _errorMessage = 'Error parsing architect $architectId: $e';
-                print(_errorMessage);
-              }
-            }
-          });
-          print('Final architects list: ${_architects.length} architects');
-          notifyListeners();
-        }
-      }, onError: (error) {
-        _errorMessage = 'Error loading architects: $error';
-        print(_errorMessage);
-        Get.snackbar('Warning', _errorMessage!,
-            snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange);
-        _architects.clear();
+        _professionals.clear();
         notifyListeners();
       });
     }
@@ -241,13 +217,11 @@ class ProjectController extends ChangeNotifier {
 
   void _stopRealTimeListeners() {
     _projectsSubscription?.cancel();
-    _contractorsSubscription?.cancel();
-    _architectsSubscription?.cancel();
+    _professionalsSubscription?.cancel();
     _messageSubscriptions.forEach((_, subscription) => subscription.cancel());
     _messageSubscriptions.clear();
     _projects.clear();
-    _contractors.clear();
-    _architects.clear();
+    _professionals.clear();
     _errorMessage = null;
     print('Stopped all real-time listeners');
   }
@@ -274,7 +248,6 @@ class ProjectController extends ChangeNotifier {
         print("Loaded project: ${project.id}, userId: ${project.userId}, assignedContractorId: ${project.assignedContractorId}");
       });
 
-      // Start message listeners for each loaded project
       for (var project in _projects) {
         _startMessageListener(project.id);
       }
@@ -313,17 +286,19 @@ class ProjectController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadContractors() async {
+  Future<void> loadProfessionals() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      _contractors = await _projectService.getContractors();
-      print("Contractors retrieved: ${_contractors.length} - List: $_contractors");
+      final contractors = await _projectService.getContractors();
+      final architects = await _projectService.getArchitects();
+      _professionals = [...contractors, ...architects];
+      print("Professionals retrieved: ${_professionals.length} - List: $_professionals");
     } catch (e) {
-      _errorMessage = 'Failed to load contractors: $e';
+      _errorMessage = 'Failed to load professionals: $e';
       print(_errorMessage);
-      _contractors.clear();
+      _professionals.clear();
       Get.snackbar('Warning', _errorMessage!,
           snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange);
     } finally {
@@ -332,7 +307,7 @@ class ProjectController extends ChangeNotifier {
     }
   }
 
-  Future<List<Contractor>> loadProfessionalsForReview(String userId) async {
+  Future<List<Professional>?> loadProfessionalsForReview(String userId) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -460,7 +435,6 @@ class ProjectController extends ChangeNotifier {
   }
 }
 
-// Extension for Project to simplify updates
 extension ProjectExtension on Project {
   Project copyWith({
     String? id,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../Controllers/authControllers.dart';
@@ -6,7 +8,7 @@ import '../Shared/widgets/custom_button.dart';
 import '../Shared/widgets/input_field.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../Shared/widgets/auth_success_animation.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Added for auth access
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminSignInScreen extends StatefulWidget {
   const AdminSignInScreen({super.key});
@@ -45,26 +47,52 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
 
   Future<bool> _isAdminCodeValid(String enteredCode) async {
     try {
+      print('Querying admin_code from Firebase with user: ${FirebaseAuth.instance.currentUser?.email}, enteredCode: "$enteredCode"');
+      final snapshot = await FirebaseDatabase.instance.ref('admin_code').get();
+      print('Raw admin_code snapshot value: ${snapshot.value}, type: ${snapshot.value.runtimeType}, exists: ${snapshot.exists}');
+      if (!snapshot.exists) {
+        print('Admin code node does not exist');
+        return false;
+      }
+      final storedCode = snapshot.value.toString().trim();
+      final isValid = storedCode.toLowerCase() == enteredCode.toLowerCase();
+      print('Admin code comparison - Entered (trimmed): \'$enteredCode\', Stored (trimmed): \'$storedCode\'');
+      print('Admin code validation result: $isValid (case-insensitive comparison)');
+      return isValid;
+    } catch (e) {
+      print('Error validating admin code: $e');
+      return false;
+    }
+  }
+
+/*  Future<bool> _isAdminCodeValid(String enteredCode) async {
+    try {
       final DatabaseReference ref = FirebaseDatabase.instance.ref('admin_code');
-      print('Querying admin_code from Firebase with auth: ${FirebaseAuth.instance.currentUser?.email}');
+      final userEmail = FirebaseAuth.instance.currentUser?.email ?? 'No user';
+      print('Querying admin_code from Firebase with user: $userEmail, enteredCode: "$enteredCode"');
       final DataSnapshot snapshot = await ref.get().timeout(const Duration(seconds: 10));
 
       if (!snapshot.exists) {
-        print("Admin code node not found in Firebase");
+        print("Admin code node does not exist in Firebase at path: /admin_code");
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Admin code not configured. Contact support.'),
+            content: Text('Admin code not configured in database. Contact support.'),
             backgroundColor: Colors.red,
           ),
         );
         return false;
       }
 
+      // Log the raw snapshot value to debug formatting issues
+      print('Raw admin_code snapshot value: ${snapshot.value}, type: ${snapshot.value.runtimeType}');
+
       final storedCode = snapshot.value?.toString().trim() ?? '';
-      print("Admin code validation - Entered: '$enteredCode', Stored: '$storedCode'");
+      final trimmedEnteredCode = enteredCode.trim();
+
+      print("Admin code comparison - Entered (trimmed): '$trimmedEnteredCode', Stored (trimmed): '$storedCode'");
 
       if (storedCode.isEmpty) {
-        print("Stored admin code is empty");
+        print("Stored admin code is empty after trimming");
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Admin code is not set in Firebase.'),
@@ -74,12 +102,14 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
         return false;
       }
 
-      final isValid = storedCode == enteredCode.trim();
-      print("Admin code validation result: $isValid");
+      // Case-insensitive comparison
+      final isValid = storedCode.toLowerCase() == trimmedEnteredCode.toLowerCase();
+      print("Admin code validation result: $isValid (case-insensitive comparison)");
+
       if (!isValid) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Invalid admin code'),
+            content: Text('Invalid admin code. Please check and try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -94,6 +124,13 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
             backgroundColor: Colors.red,
           ),
         );
+      } else if (error is TimeoutException) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Request timed out while fetching admin code. Check your network.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -104,8 +141,7 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
       }
       return false;
     }
-  }
-
+  }*/
   void _handleSignIn() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -114,6 +150,18 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
     try {
       print('Attempting admin sign-in with email: ${_emailController.text}, password: [hidden], adminCode: ${_adminCodeController.text}');
 
+      // Ensure the user is authenticated before querying admin_code
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('No current user, attempting pre-authentication with email and password');
+        await _authController.signInWithEmail(_emailController.text.trim().toLowerCase(), _passwordController.text);
+        user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          throw Exception('Authentication failed');
+        }
+      }
+
+      // Validate admin code
       int retryCount = 0;
       const maxRetries = 3;
       bool isAdminCodeValid = false;
@@ -124,7 +172,7 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
           if (retryCount == maxRetries - 1) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Invalid admin code or network error'),
+                content: Text('Invalid admin code or network error after retries'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -141,6 +189,7 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
         return;
       }
 
+      // Proceed with sign-in
       final success = await _authController.signInWithEmail(
         _emailController.text.trim().toLowerCase(),
         _passwordController.text,
@@ -150,25 +199,44 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
 
       if (success && mounted) {
         final userData = _authController.currentUser.value;
-        if (userData != null && userData.role == UserRole.admin) {
-          if (_rememberMe) {
-            // Implement remember me functionality if needed
+        if (userData != null) {
+          if (userData.role != UserRole.admin) {
+            print('User role is not admin, updating to admin role for UID: ${userData.uid}');
+            final updatedUserData = userData.copyWith(
+              role: UserRole.admin,
+              lastLogin: DateTime.now(),
+            );
+            await FirebaseDatabase.instance.ref('user/admin/${userData.uid}').set(updatedUserData.toJson());
+            _authController.currentUser.value = updatedUserData;
           }
 
-          await showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AuthSuccessAnimation(
-              onAnimationComplete: () {
-                Navigator.pop(context);
-                Get.offAllNamed('/admin-dashboard');
-              },
-            ),
-          );
+          if (userData.role == UserRole.admin) {
+            if (_rememberMe) {
+              // Implement remember me functionality if needed
+            }
+
+            await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => AuthSuccessAnimation(
+                onAnimationComplete: () {
+                  Navigator.pop(context);
+                  Get.offAllNamed('/admin-dashboard');
+                },
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Access denied: User is not an admin - Role: ${userData.role}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Access denied: Admin only or role issue - Role: ${userData?.role}'),
+            const SnackBar(
+              content: Text('User data not found after sign-in'),
               backgroundColor: Colors.red,
             ),
           );
@@ -186,7 +254,7 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text('Error during sign-in: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -195,6 +263,122 @@ class _AdminSignInScreenState extends State<AdminSignInScreen> {
       setState(() => _isLoading = false);
     }
   }
+ /* void _handleSignIn() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      print('Attempting admin sign-in with email: ${_emailController.text}, password: [hidden], adminCode: ${_adminCodeController.text}');
+
+      // Ensure the user is authenticated (temporary check before code validation)
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        await _authController.signInWithEmail(_emailController.text.trim().toLowerCase(), _passwordController.text);
+      }
+
+      int retryCount = 0;
+      const maxRetries = 3;
+      bool isAdminCodeValid = false;
+
+      while (retryCount < maxRetries && !isAdminCodeValid) {
+        isAdminCodeValid = await _isAdminCodeValid(_adminCodeController.text);
+        if (!isAdminCodeValid) {
+          if (retryCount == maxRetries - 1) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Invalid admin code or network error after retries'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            break;
+          }
+          retryCount++;
+          print('Retry attempt $retryCount for admin code validation');
+          await Future.delayed(const Duration(seconds: 2));
+        }
+      }
+
+      if (!isAdminCodeValid) {
+        print('Admin code validation failed after retries');
+        return;
+      }
+
+      // Proceed with sign-in if code is valid
+      final success = await _authController.signInWithEmail(
+        _emailController.text.trim().toLowerCase(),
+        _passwordController.text,
+      );
+
+      print('Sign-in result: success=$success, user=${_authController.currentUser.value?.email}, role=${_authController.currentUser.value?.role}, emailVerified=${_authController.currentUser.value?.emailVerified}');
+
+      if (success && mounted) {
+        final userData = _authController.currentUser.value;
+        if (userData != null) {
+          if (userData.role != UserRole.admin) {
+            print('User role is not admin, updating to admin role for UID: ${userData.uid}');
+            await FirebaseDatabase.instance.ref('user/admin/${userData.uid}').set({
+              'email': userData.email,
+              'role': 'admin',
+              'uid': userData.uid,
+            });
+            _authController.currentUser.value = userData.copyWith(role: UserRole.admin);
+          }
+
+          if (userData.role == UserRole.admin) {
+            if (_rememberMe) {
+              // Implement remember me functionality if needed
+            }
+
+            await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => AuthSuccessAnimation(
+                onAnimationComplete: () {
+                  Navigator.pop(context);
+                  Get.offAllNamed('/admin-dashboard');
+                },
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Access denied: User is not an admin - Role: ${userData.role}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('User data not found after sign-in'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Sign-in error: $e');
+      if (e is FirebaseAuthException && (e.code == 'wrong-password' || e.code == 'user-not-found')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid email or password'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error during sign-in: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }*/
+
 
   @override
   Widget build(BuildContext context) {

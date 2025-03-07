@@ -1,3 +1,4 @@
+// lib/Views/FindProfessionalsDashboard.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -6,7 +7,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:buildbuddy/Controllers/projectController.dart';
-import 'package:buildbuddy/Models/contractorModel.dart';
+import 'package:buildbuddy/Models/Professional.dart'; // Updated import
 import 'package:buildbuddy/Views/DashBoard/HomeOwner/myProjects.dart';
 
 class FindProfessionalsDashboard extends StatefulWidget {
@@ -22,7 +23,7 @@ class _FindProfessionalsDashboardState extends State<FindProfessionalsDashboard>
   LatLng _selectedLocation = LatLng(31.4504, 73.1350);
   TextEditingController _searchController = TextEditingController();
   final MapController _mapController = MapController();
-  Contractor? _selectedProfessional;
+  Professional? _selectedProfessional; // Changed from Contractor? to Professional?
   String _selectedRole = 'Contractor'; // Default role
 
   Color _getProfessionColor(String profession) {
@@ -41,7 +42,7 @@ class _FindProfessionalsDashboardState extends State<FindProfessionalsDashboard>
     super.initState();
     _getCurrentLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ProjectController>(context, listen: false).loadContractors();
+      Provider.of<ProjectController>(context, listen: false).loadProfessionals(); // Changed from loadContractors
     });
   }
 
@@ -92,7 +93,7 @@ class _FindProfessionalsDashboardState extends State<FindProfessionalsDashboard>
       await placemarkFromCoordinates(latitude, longitude);
       Placemark place = placemarks[0];
       setState(() {
-        userLocation = "${place.locality}, ${place.administrativeArea}";
+        userLocation = "${place.locality ?? 'Unknown'}, ${place.administrativeArea ?? 'Unknown'}";
       });
     } catch (e) {
       print("Error fetching address: $e");
@@ -163,8 +164,7 @@ class _FindProfessionalsDashboardState extends State<FindProfessionalsDashboard>
       body: Column(
         children: [
           Padding(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
             child: Row(
               children: [
                 const Icon(Icons.location_on, color: Colors.redAccent),
@@ -227,22 +227,22 @@ class _FindProfessionalsDashboardState extends State<FindProfessionalsDashboard>
                 if (controller.isLoading) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (controller.contractors.isEmpty) {
+                if (controller.professionals.isEmpty) {
                   return const Center(child: Text('No professionals found.'));
                 }
 
-                final filteredProfessionals = controller.contractors
+                final filteredProfessionals = controller.professionals
                     .where((professional) =>
-                (professional.name.isNotEmpty &&
-                    professional.name
+                (professional.name?.isNotEmpty ?? false &&
+                    (professional.name ?? '')
                         .toLowerCase()
-                        .contains(_searchController.text.toLowerCase())) ||
+                        .contains(_searchController.text.toLowerCase())) || // Fixed typo
                     (professional.email?.isNotEmpty ?? false &&
-                        professional.email!
+                        (professional.email ?? '')
                             .toLowerCase()
                             .contains(_searchController.text.toLowerCase())) ||
                     (professional.location?.isNotEmpty ?? false &&
-                        professional.location!
+                        (professional.location ?? '')
                             .toLowerCase()
                             .contains(_searchController.text.toLowerCase())))
                     .where((professional) => professional.role == _selectedRole)
@@ -283,7 +283,7 @@ class _FindProfessionalsDashboardState extends State<FindProfessionalsDashboard>
     );
   }
 
-  Widget _buildProfessionalCard(Contractor professional) {
+  Widget _buildProfessionalCard(Professional professional) {
     return Card(
       elevation: 3,
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -292,7 +292,7 @@ class _FindProfessionalsDashboardState extends State<FindProfessionalsDashboard>
           professional.role == 'Architect' ? Icons.architecture : Icons.engineering,
           color: _getProfessionColor(professional.role),
         ),
-        title: Text(professional.name),
+        title: Text(professional.name ?? 'Unnamed Professional'),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -300,7 +300,7 @@ class _FindProfessionalsDashboardState extends State<FindProfessionalsDashboard>
               Text('Email: ${professional.email}'),
             if (professional.location != null)
               Text('Location: ${professional.location}'),
-            Text('Rating: ${professional.rating.toStringAsFixed(1)} (${professional.reviewCount} reviews)'), // Show rating with 1 decimal place
+            Text('Rating: ${professional.rating.toStringAsFixed(1)} (${professional.reviewCount} reviews)'),
           ],
         ),
         trailing: ElevatedButton(
@@ -321,7 +321,6 @@ class _FindProfessionalsDashboardState extends State<FindProfessionalsDashboard>
     );
   }
 }
-
 
 
 
