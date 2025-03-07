@@ -6,7 +6,7 @@ class Order {
   final String vendorId;
   final String material;
   final int quantity;
-  final double price;
+  final double amount; // Using amount instead of price
   final String status;
   final DateTime createdAt;
 
@@ -16,7 +16,7 @@ class Order {
     required this.vendorId,
     required this.material,
     required this.quantity,
-    required this.price,
+    required this.amount, // Using amount instead of price
     required this.status,
     required this.createdAt,
   });
@@ -26,7 +26,7 @@ class Order {
     'vendorId': vendorId,
     'material': material,
     'quantity': quantity,
-    'price': price,
+    'amount': amount, // Using amount instead of price
     'status': status,
     'createdAt': createdAt.toIso8601String(),
   };
@@ -38,7 +38,7 @@ class Order {
       vendorId: map['vendorId'] as String,
       material: map['material'] as String,
       quantity: map['quantity'] as int,
-      price: map['price'] as double,
+      amount: map['amount'] as double, // Using amount instead of price
       status: map['status'] as String,
       createdAt: DateTime.parse(map['createdAt'] as String),
     );

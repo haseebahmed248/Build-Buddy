@@ -1,91 +1,153 @@
+// File: lib/Views/DashBoard/Contractor/materialOrders.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:buildbuddy/Controllers/contractorController.dart';
+import 'package:buildbuddy/Models/orderModel.dart';
 
 class MaterialOrdersScreen extends StatelessWidget {
   const MaterialOrdersScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Material Orders'),
-      ),
-      body: Consumer<ContractorController>(
-        builder: (context, controller, child) {
-          if (controller.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (controller.errorMessage != null) {
-            return Center(child: Text('Error: ${controller.errorMessage}'));
-          }
-          return ListView.builder(
-            itemCount: controller.orders.length,
-            itemBuilder: (context, index) {
-              final order = controller.orders[index];
-              return ListTile(
-                title: Text('Order #${order.id} - ${order.material}'),
-                subtitle: Text('Quantity: ${order.quantity}, Status: ${order.status}'),
-                trailing: Text('\$${order.price}'),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showPlaceOrderDialog(context),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  void _showPlaceOrderDialog(BuildContext context) {
-    final contractorController = Provider.of<ContractorController>(context, listen: false);
-    String vendorId = '';
-    String material = '';
-    int quantity = 1;
-    double price = 0.0;
+  void _showCancelOrderDialog(BuildContext context, ContractorController controller, Order order) {
+    if (order.status == 'Cancelled') return; // Prevent cancelling already cancelled orders
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Place Material Order'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: const InputDecoration(labelText: 'Vendor ID'),
-              onChanged: (value) => vendorId = value,
-            ),
-            TextField(
-              decoration: const InputDecoration(labelText: 'Material'),
-              onChanged: (value) => material = value,
-            ),
-            TextField(
-              decoration: const InputDecoration(labelText: 'Quantity'),
-              keyboardType: TextInputType.number,
-              onChanged: (value) => quantity = int.tryParse(value) ?? 1,
-            ),
-            TextField(
-              decoration: const InputDecoration(labelText: 'Price (\$)'),
-              keyboardType: TextInputType.number,
-              onChanged: (value) => price = double.tryParse(value) ?? 0.0,
-            ),
-          ],
-        ),
+        title: Text('Cancel Order #${order.id}'),
+        content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('No'),
           ),
           TextButton(
             onPressed: () {
-              contractorController.placeOrder(vendorId, material, quantity, price);
+              controller.cancelOrder(order.id);
               Navigator.pop(context);
             },
-            child: const Text('Place Order'),
+            child: const Text('Yes', style: TextStyle(color: Colors.red)),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1E3799), Color(0xFF4834DF)],
+            ),
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 2))],
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white24,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.shopping_cart, color: Colors.white, size: 28),
+                                ),
+                                const SizedBox(width: 12),
+                                const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'My Orders',
+                                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      'Manage your material orders',
+                                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.filter_list, color: Colors.white),
+                              onPressed: () {
+                                // Add filter logic here if needed
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: Consumer<ContractorController>(
+        builder: (context, controller, child) {
+          if (controller.isLoading) return const Center(child: CircularProgressIndicator());
+          if (controller.errorMessage != null) return Center(child: Text('Error: ${controller.errorMessage}'));
+          return ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: controller.orders.length,
+            itemBuilder: (context, index) {
+              final order = controller.orders[index];
+              return Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16.0),
+                  title: Text(
+                    'Order #${order.id} - ${order.material}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  subtitle: Text(
+                    'Quantity: ${order.quantity}, Status: ${order.status}',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '\$${order.amount.toStringAsFixed(2)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4834DF)),
+                      ),
+                      if (order.status != 'Cancelled') // Show cancel button only if not cancelled
+                        IconButton(
+                          icon: const Icon(Icons.cancel, color: Colors.red),
+                          onPressed: () => _showCancelOrderDialog(context, controller, order),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

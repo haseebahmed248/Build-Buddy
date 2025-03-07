@@ -1,3 +1,235 @@
+
+
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+class ReviewContractorTasksController extends GetxController {
+  final DatabaseReference _database = FirebaseDatabase.instance.ref();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  final tasks = <Map<String, dynamic>>[].obs;
+  final isLoading = true.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchTasks();
+  }
+
+  void fetchTasks() async {
+    try {
+      isLoading.value = true;
+      final architectUid = _auth.currentUser?.uid;
+      if (architectUid == null) {
+        Get.snackbar('Error', 'User not authenticated');
+        return;
+      }
+
+      final tasksRef = _database.child('tasks');
+      tasksRef.onValue.listen((event) {
+        final data = event.snapshot.value as Map<dynamic, dynamic>?;
+        if (data != null) {
+          final taskList = <Map<String, dynamic>>[];
+          data.forEach((projectId, projectTasks) {
+            final tasks = Map<dynamic, dynamic>.from(projectTasks);
+            tasks.forEach((taskId, value) {
+              final task = Map<String, dynamic>.from(value);
+              if (task['architectId'] == architectUid) {
+                task['id'] = taskId;
+                task['projectId'] = projectId;
+                taskList.add(task);
+              }
+            });
+          });
+          this.tasks.assignAll(taskList);
+        } else {
+          tasks.clear();
+        }
+        isLoading.value = false;
+      });
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to fetch tasks: $e');
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> updateTaskStatus(String projectId, String taskId, String status) async {
+    try {
+      await _database.child('tasks/$projectId/$taskId').update({'status': status});
+      Get.snackbar('Success', 'Task status updated to $status');
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to update task status: $e');
+    }
+  }
+}
+
+class ReviewContractorTasksScreen extends StatefulWidget {
+  @override
+  _ReviewContractorTasksScreenState createState() => _ReviewContractorTasksScreenState();
+}
+
+class _ReviewContractorTasksScreenState extends State<ReviewContractorTasksScreen> {
+  final ReviewContractorTasksController _controller = Get.put(ReviewContractorTasksController());
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Pending':
+        return Colors.orange;
+      case 'Completed':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  void _showTaskReviewDialog(Map<String, dynamic> task) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(task['title'], style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green[800])),
+        content: const Text('Are you sure the contractor has completed the task according to the design?', style: TextStyle(fontSize: 16)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(color: Colors.grey[700]))),
+          TextButton(
+            onPressed: () {
+              _controller.updateTaskStatus(task['projectId'], task['id'], 'Completed');
+              Navigator.pop(context);
+            },
+            child: Text('Approve', style: TextStyle(color: Colors.green[800])),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E3799), Color(0xFF4834DF)]),
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 2))],
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    children: [
+                      IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22), onPressed: () => Navigator.pop(context)),
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.task, color: Colors.white, size: 28)),
+                                const SizedBox(width: 12),
+                                const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text('Review Tasks', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                                  Text('Approve Contractor Work', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                                ]),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Obx(() {
+          if (_controller.isLoading.value) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return ListView.builder(
+            physics: const BouncingScrollPhysics(),
+            itemCount: _controller.tasks.length,
+            itemBuilder: (context, index) {
+              final task = _controller.tasks[index];
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.only(bottom: 16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => _showTaskReviewDialog(task),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(color: _getStatusColor(task['status']).withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
+                              child: Icon(Icons.design_services, color: _getStatusColor(task['status']), size: 24),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(task['title'], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green[800])),
+                                  const SizedBox(height: 4),
+                                  Text(task['description'], style: TextStyle(color: Colors.grey[600], fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
+                                    child: Text(task['status'], style: TextStyle(color: _getStatusColor(task['status']), fontSize: 12, fontWeight: FontWeight.w500)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(icon: Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 20), onPressed: () => _showTaskReviewDialog(task)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        }),
+      ),
+    );
+  }
+}
+
+
+
+
+
+
+
+
+
+
+/////////////////UI/////////////////////
+
+/*
 import 'package:flutter/material.dart';
 
 class ReviewContractorTasksScreen extends StatefulWidget {
@@ -274,3 +506,4 @@ class _ReviewContractorTasksScreenState
     );
   }
 }
+*/

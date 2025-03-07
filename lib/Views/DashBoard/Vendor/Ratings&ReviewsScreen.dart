@@ -1,4 +1,127 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:buildbuddy/Controllers/vendorController.dart';
+
+class ReviewVendorTasksScreen extends StatelessWidget {
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Completed': return const Color(0xFF2ECC71);
+      case 'Pending': return const Color(0xFFF1C40F);
+      case 'Overdue': return const Color(0xFFE74C3C);
+      default: return const Color(0xFF95A5A6);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Container(
+          decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E3799), Color(0xFF4834DF)]), boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 2))]),
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    children: [
+                      IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22), onPressed: () => Navigator.pop(context)),
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.assignment_outlined, color: Colors.white, size: 28)),
+                                const SizedBox(width: 12),
+                                const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Vendor Reviews', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)), Text('Manage vendor performance', style: TextStyle(color: Colors.white70, fontSize: 14))]),
+                              ],
+                            ),
+                            IconButton(icon: const Icon(Icons.filter_list, color: Colors.white), onPressed: () {}),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: Stack(
+        children: [
+          Positioned(top: -100, right: -50, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF4834DF).withOpacity(0.1)))),
+          Positioned(bottom: -80, left: -60, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF1E3799).withOpacity(0.1)))),
+          Consumer<VendorController>(
+            builder: (context, controller, child) {
+              if (controller.isLoading) return const Center(child: CircularProgressIndicator());
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: controller.tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = controller.tasks[index];
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Container(
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: _getStatusColor(task['status']).withOpacity(0.1), borderRadius: BorderRadius.circular(15)), child: Icon(task['icon'] ?? Icons.assignment_outlined, color: _getStatusColor(task['status']), size: 24)),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(task['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E3799))),
+                                    const SizedBox(height: 4),
+                                    Text(task['description'], style: TextStyle(color: Colors.grey[600], fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                    const SizedBox(height: 4),
+                                    Text(task['date'], style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: _getStatusColor(task['status']).withOpacity(0.1), borderRadius: BorderRadius.circular(20)), child: Text(task['status'], style: TextStyle(color: _getStatusColor(task['status']), fontWeight: FontWeight.bold, fontSize: 12))),
+                                  const SizedBox(height: 8),
+                                  Row(children: List.generate(5, (starIndex) => Icon(starIndex < (task['rating'] ?? 0) ? Icons.star : Icons.star_border, size: 16, color: const Color(0xFFF1C40F)))),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(onPressed: () {}, child: const Icon(Icons.add), backgroundColor: const Color(0xFF4834DF)),
+    );
+  }
+}
+
+
+
+
+
+
+//////////UI//////////
+/*
+import 'package:flutter/material.dart';
 
 class ReviewVendorTasksScreen extends StatelessWidget {
   final List<Map<String, dynamic>> tasks = [
@@ -307,4 +430,4 @@ class ReviewVendorTasksScreen extends StatelessWidget {
       ),
     );
   }
-}
+}*/

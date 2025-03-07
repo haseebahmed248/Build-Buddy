@@ -1,4 +1,327 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:buildbuddy/Controllers/vendorController.dart';
+
+class VendorAnalyticsScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1E3799), Color(0xFF4834DF)],
+            ),
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 2))],
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white24,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.analytics_outlined, color: Colors.white, size: 28),
+                                ),
+                                const SizedBox(width: 12),
+                                const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Analytics',
+                                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      'Business Performance Overview',
+                                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.filter_list, color: Colors.white),
+                              onPressed: () {},
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: Stack(
+        children: [
+          Positioned(
+            top: -100,
+            right: -50,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF4834DF).withOpacity(0.1),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -80,
+            left: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF1E3799).withOpacity(0.1),
+              ),
+            ),
+          ),
+          Consumer<VendorController>(
+            builder: (context, controller, child) {
+              if (controller.isLoading) return const Center(child: CircularProgressIndicator());
+              final products = controller.vendorData['products'] as Map? ?? {};
+              final totalRevenue = controller.orders.fold<double>(0, (sum, order) => sum + (order.amount?? 0.0)); // Handle null price
+              final analyticsData = [
+                {
+                  'title': 'Total Orders',
+                  'value': '${controller.orders.length}',
+                  'icon': Icons.shopping_basket_rounded,
+                  'status': 'Active',
+                  'color': const Color(0xFF2ECC71)
+                },
+                {
+                  'title': 'Total Revenue',
+                  'value': '\$${totalRevenue.toStringAsFixed(2)}',
+                  'icon': Icons.monetization_on_rounded,
+                  'status': 'Earned',
+                  'color': const Color(0xFF4834DF)
+                },
+                {
+                  'title': 'Pending Orders',
+                  'value': '${controller.orders.where((o) => o.status == 'Pending').length}',
+                  'icon': Icons.pending_actions_rounded,
+                  'status': 'Pending',
+                  'color': const Color(0xFFF1C40F)
+                },
+                {
+                  'title': 'Total Products',
+                  'value': '${products.length}',
+                  'icon': Icons.inventory_2_rounded,
+                  'status': 'In Stock',
+                  'color': const Color(0xFF1E3799)
+                },
+              ];
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ListView(
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildPerformanceSummary(),
+                    const SizedBox(height: 16),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.9,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: analyticsData.length,
+                      itemBuilder: (context, index) => _buildAnalyticsCard(analyticsData[index]),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildQuickActionButtons(),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        child: const Icon(Icons.share_outlined),
+        backgroundColor: const Color(0xFF4834DF),
+      ),
+    );
+  }
+
+  Widget _buildPerformanceSummary() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4834DF).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: const Icon(Icons.trending_up_rounded, color: Color(0xFF4834DF), size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Performance Insights',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E3799)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Your business is 15% better this month',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsCard(Map<String, dynamic> analytics) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: analytics['color'].withOpacity(0.1),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Icon(analytics['icon'], color: analytics['color'], size: 24),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              analytics['value'],
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E3799)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              analytics['title'],
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: analytics['color'].withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                analytics['status'],
+                style: TextStyle(color: analytics['color'], fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: ElevatedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.insights_rounded, color: Color(0xFF4834DF)),
+              label: const Text('Detailed Report', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black87)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: ElevatedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.notifications_active_rounded, color: Color(0xFF2ECC71)),
+              label: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black87)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+
+
+
+
+
+
+
+
+////UI/////
+/*
+import 'package:flutter/material.dart';
 
 class VendorAnalyticsScreen extends StatelessWidget {
   final List<Map<String, dynamic>> analyticsData = [
@@ -410,4 +733,4 @@ class VendorAnalyticsScreen extends StatelessWidget {
       ],
     );
   }
-}
+}*/

@@ -1,48 +1,53 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:buildbuddy/Controllers/authControllers.dart';
 import 'package:buildbuddy/Models/orderModel.dart';
 import 'package:buildbuddy/Models/messageModel.dart';
-import 'package:buildbuddy/Models/userModels.dart';
-import 'dart:async';
 
-/// Manages vendor-specific functionality, including managing orders from Contractors,
-/// messages with Contractors, and ensuring role-based access. Aligns with SRS 3.1.3 (Vendor Functionality),
-/// 3.2.1 (Performance), 3.2.2 (Usability), 3.2.3 (Security), and 3.2.4 (Reliability).
+import '../Models/userModels.dart';
+
 class VendorController with ChangeNotifier {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final AuthController _authController; // Reference to AuthController for user data
+  final AuthController _authController;
 
-  List<Order> _orders = []; // Orders received from Contractors
-  List<Message> _contractorMessages = []; // Messages with Contractors
+  List<Order> _orders = [];
+  List<Message> _messages = [];
+  Map<String, dynamic> _vendorData = {};
+  List<Map<String, dynamic>> _invoices = [];
+  List<Map<String, dynamic>> _notifications = [];
+  List<Map<String, dynamic>> _tasks = [];
   bool _isLoading = false;
   String? _errorMessage;
 
-  /// Getters for vendor-managed data, ensuring real-time updates and usability (SRS 3.2.2).
   List<Order> get orders => _orders;
-  List<Message> get contractorMessages => _contractorMessages;
+  List<Message> get messages => _messages;
+  Map<String, dynamic> get vendorData => _vendorData;
+  List<Map<String, dynamic>> get invoices => _invoices;
+  List<Map<String, dynamic>> get notifications => _notifications;
+  List<Map<String, dynamic>> get tasks => _tasks;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  String get userType => 'vendor'; // Added for consistency
+  String? get currentUserId => _auth.currentUser?.uid;
 
-  StreamSubscription? _ordersSubscription;
-  StreamSubscription? _contractorMessagesSubscription;
+  StreamSubscription<DatabaseEvent>? _ordersSubscription;
+  StreamSubscription<DatabaseEvent>? _messagesSubscription;
+  StreamSubscription<DatabaseEvent>? _vendorDataSubscription;
+  StreamSubscription<DatabaseEvent>? _invoicesSubscription;
+  StreamSubscription<DatabaseEvent>? _notificationsSubscription;
+  StreamSubscription<DatabaseEvent>? _tasksSubscription;
 
-  /// Constructor initializes with AuthController for integrated functionality.
   VendorController(this._authController) {
     _checkVendorStatus();
-    _authController.addListener(_onAuthStateChanged); // Listen to AuthController changes
+    _authController.addListener(_onAuthStateChanged);
   }
 
-  /// Handles authentication state changes to update vendor status and listeners.
-  void _onAuthStateChanged() {
-    _checkVendorStatus();
-  }
+  void _onAuthStateChanged() => _checkVendorStatus();
 
-  /// Checks if the current user is a vendor, starting or stopping real-time listeners accordingly.
-  /// Ensures security and role-based access (SRS 3.2.3).
   void _checkVendorStatus() {
     if (_authController.currentUser.value?.role == UserRole.vendor) {
       _startRealTimeListeners();
@@ -53,9 +58,7 @@ class VendorController with ChangeNotifier {
     }
   }
 
-  /// Starts real-time listeners for orders and messages, ensuring performance (SRS 3.2.1)
-  /// and real-time updates (SRS 3.2.2).
-  void _startRealTimeListeners() {
+/*  void _startRealTimeListeners() {
     final user = _auth.currentUser;
     if (user == null) {
       _errorMessage = 'User not authenticated';
@@ -63,123 +66,242 @@ class VendorController with ChangeNotifier {
       return;
     }
 
-    // Real-time listener for orders (received by Vendor)
-    _ordersSubscription = _database.child('orders').orderByChild('vendorId').equalTo(user.uid).onValue.listen((event) {
-      if (event.snapshot.exists) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>?;
-        if (data != null) {
-          _orders = data.entries.map((entry) {
-            final map = Map<String, dynamic>.from(entry.value as Map);
-            final id = entry.key as String; // Ensure id is a String
-            return Order.fromMap(map,id: ''); // Pass map and id as separate arguments
-          }).toList();
+    // Vendor Data Listener
+    _vendorDataSubscription = _database.child('vendors/${user.uid}').onValue.listen(
+          (event) {
+        if (event.snapshot.exists) {
+          _vendorData = Map<String, dynamic>.from(event.snapshot.value as Map);
+          notifyListeners();
+        } else {
+          _vendorData = {};
           notifyListeners();
         }
-      }
-    }, onError: (error) {
-      _errorMessage = 'Failed to load orders: $error';
-      notifyListeners();
-    });
+      },
+      onError: (error) {
+        _errorMessage = 'Failed to fetch vendor data: $error';
+        notifyListeners();
+      },
+    );
 
-    // Real-time listener for messages with Contractors
-    _contractorMessagesSubscription = _database.child('messages/contractor_vendor').orderByChild('receiverId').equalTo(user.uid).onValue.listen((event) {
-      if (event.snapshot.exists) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>?;
-        if (data != null) {
-          _contractorMessages = data.entries.map((entry) {
-            final map = Map<String, dynamic>.from(entry.value as Map);
-            final id = entry.key as String; // Ensure id is a String
-            return Message.fromMap(map, id: ''); // Pass map and id as separate arguments
-          }).toList();
+    // Orders Listener
+    _ordersSubscription = _database.child('vendors/${user.uid}/orders').onValue.listen(
+          (event) {
+        if (event.snapshot.exists) {
+          final data = event.snapshot.value as Map<dynamic, dynamic>?;
+          if (data != null) {
+            _orders = data.entries.map((e) => Order.fromMap(Map<String, dynamic>.from(e.value as Map), id: e.key as String)).toList();
+            notifyListeners();
+          } else {
+            _orders = [];
+            notifyListeners();
+          }
+        } else {
+          _orders = [];
           notifyListeners();
         }
-      }
-    }, onError: (error) {
-      _errorMessage = 'Failed to load contractor messages: $error';
+      },
+      onError: (error) {
+        _errorMessage = 'Failed to fetch orders: $error';
+        notifyListeners();
+      },
+    );
+
+    // Messages Listener
+    _messagesSubscription = _database
+        .child('messages/contractor_vendor')
+        .orderByChild('receiverId')
+        .equalTo(user.uid)
+        .onValue
+        .listen(
+          (event) {
+        if (event.snapshot.exists) {
+          final data = event.snapshot.value as Map<dynamic, dynamic>?;
+          if (data != null) {
+            _messages = data.entries.map((e) => Message.fromMap(Map<String, dynamic>.from(e.value as Map), id: e.key as String)).toList();
+            notifyListeners();
+          } else {
+            _messages = [];
+            notifyListeners();
+          }
+        } else {
+          _messages = [];
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        _errorMessage = 'Failed to fetch messages: $error';
+        notifyListeners();
+      },
+    );
+
+    // Invoices Listener
+    _invoicesSubscription = _database.child('invoices/${user.uid}').onValue.listen(
+          (event) {
+        if (event.snapshot.exists) {
+          final data = event.snapshot.value as Map<dynamic, dynamic>?;
+          if (data != null) {
+            _invoices = data.entries.map((e) => Map<String, dynamic>.from(e.value as Map)..['id'] = e.key).toList();
+            notifyListeners();
+          } else {
+            _invoices = [];
+            notifyListeners();
+          }
+        } else {
+          _invoices = [];
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        _errorMessage = 'Failed to fetch invoices: $error';
+        notifyListeners();
+      },
+    );
+
+    // Notifications Listener
+    _notificationsSubscription = _database.child('notifications/${user.uid}').onValue.listen(
+          (event) {
+        if (event.snapshot.exists) {
+          final data = event.snapshot.value as Map<dynamic, dynamic>?;
+          if (data != null) {
+            _notifications = data.entries.map((e) => Map<String, dynamic>.from(e.value as Map)..['id'] = e.key).toList();
+            notifyListeners();
+          } else {
+            _notifications = [];
+            notifyListeners();
+          }
+        } else {
+          _notifications = [];
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        _errorMessage = 'Failed to fetch notifications: $error';
+        notifyListeners();
+      },
+    );
+
+    // Tasks Listener
+    _tasksSubscription = _database.child('vendor_tasks/${user.uid}').onValue.listen(
+          (event) {
+        if (event.snapshot.exists) {
+          final data = event.snapshot.value as Map<dynamic, dynamic>?;
+          if (data != null) {
+            _tasks = data.entries.map((e) => Map<String, dynamic>.from(e.value as Map)..['id'] = e.key).toList();
+            notifyListeners();
+          } else {
+            _tasks = [];
+            notifyListeners();
+          }
+        } else {
+          _tasks = [];
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        _errorMessage = 'Failed to fetch tasks: $error';
+        notifyListeners();
+      },
+    );
+  }*/
+  // Example snippet for VendorController
+  void _startRealTimeListeners() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      _errorMessage = 'User not authenticated';
       notifyListeners();
-    });
+      return;
+    }
+    _ordersSubscription = _database.child('user/vendor/${user.uid}/orders').onValue.listen(
+          (event) {
+        if (event.snapshot.exists) {
+          final data = event.snapshot.value as Map<dynamic, dynamic>?;
+          if (data != null) {
+            _orders = data.entries.map((e) => Order.fromMap(Map<String, dynamic>.from(e.value as Map), id: e.key as String)).toList();
+            _errorMessage = null;
+          } else {
+            _orders = [];
+          }
+        } else {
+          _orders = [];
+          _errorMessage = 'No orders found for this vendor';
+        }
+        notifyListeners();
+      },
+      onError: (error) {
+        _errorMessage = 'Failed to fetch orders: $error';
+        notifyListeners();
+      },
+    );
   }
 
-  /// Stops real-time listeners, ensuring resource cleanup and reliability (SRS 3.2.4).
   void _stopRealTimeListeners() {
     _ordersSubscription?.cancel();
-    _contractorMessagesSubscription?.cancel();
+    _messagesSubscription?.cancel();
+    _vendorDataSubscription?.cancel();
+    _invoicesSubscription?.cancel();
+    _notificationsSubscription?.cancel();
+    _tasksSubscription?.cancel();
     _orders.clear();
-    _contractorMessages.clear();
+    _messages.clear();
+    _vendorData.clear();
+    _invoices.clear();
+    _notifications.clear();
+    _tasks.clear();
     notifyListeners();
   }
 
-  /// Checks if the current user is a vendor, ensuring security (SRS 3.2.3).
-  bool get isVendor => _authController.currentUser.value?.role == UserRole.vendor ?? false;
-
-  /// Updates the status of an order (e.g., from 'pending' to 'shipped'), ensuring usability
-  /// and reliability (SRS 3.2.2, 3.2.4).
   Future<void> updateOrderStatus(String orderId, String status) async {
     _isLoading = true;
     notifyListeners();
-
     try {
-      if (!isVendor) {
-        _errorMessage = 'Only vendors can update orders';
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      await _database.child('orders').child(orderId).update({'status': status});
+      await _database.child('vendors/${_auth.currentUser!.uid}/orders/$orderId/status').set(status);
     } catch (e) {
-      print('Error updating order status: $e');
       _errorMessage = 'Failed to update order status: $e';
-      notifyListeners();
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  /// Sends a message to a Contractor, ensuring usability and reliability (SRS 3.2.2, 3.2.4).
-  Future<void> sendMessageToContractor(String contractorId, String content) async {
+  Future<void> updateProduct(String productId, Map<String, dynamic> data) async {
     _isLoading = true;
     notifyListeners();
-
     try {
-      if (!isVendor) {
-        _errorMessage = 'Only vendors can send messages to contractors';
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      final user = _auth.currentUser;
-      if (user == null) {
-        _errorMessage = 'User not authenticated';
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      final message = Message(
-        id: '', // Will be generated by Firebase
-        senderId: user.uid,
-        receiverId: contractorId,
-        content: content,
-        timestamp: DateTime.now(),
-        type: 'contractor_vendor',
-      );
-
-      final messageRef = _database.child('messages/contractor_vendor').push();
-      await messageRef.set(message.toJson());
+      await _database.child('vendors/${_auth.currentUser!.uid}/products/$productId').update(data);
     } catch (e) {
-      print('Error sending message to contractor: $e');
-      _errorMessage = 'Failed to send message to contractor: $e';
-      notifyListeners();
+      _errorMessage = 'Failed to update product: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  /// Cleans up resources, ensuring reliability (SRS 3.2.4).
+  Future<void> addProduct(Map<String, dynamic> product) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _database.child('vendors/${_auth.currentUser!.uid}/products').push().set(product);
+    } catch (e) {
+      _errorMessage = 'Failed to add product: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> clearNotifications() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _database.child('notifications/${_auth.currentUser!.uid}').remove();
+    } catch (e) {
+      _errorMessage = 'Failed to clear notifications: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
     _stopRealTimeListeners();

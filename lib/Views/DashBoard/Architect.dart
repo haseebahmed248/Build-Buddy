@@ -1,4 +1,3 @@
-
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +16,7 @@ class ArchitectDashboardController extends GetxController {
   final pendingReviews = 0.obs;
   final newMessages = 0.obs;
   final projectsList = <Map<String, dynamic>>[].obs;
+  final designsList = <Map<String, dynamic>>[].obs; // Added for design management
   final isLoading = true.obs;
 
   @override
@@ -43,15 +43,15 @@ class ArchitectDashboardController extends GetxController {
           int activeCount = 0;
           data.forEach((key, value) {
             final project = Map<String, dynamic>.from(value);
-            if (project['architectId'] == architectUid &&
-                project['status'] != 'Completed') {
+            if (project['assignedArchitectId'] == architectUid &&
+                project['status'] != 'completed') { // Updated to match SRS terminology
               activeCount++;
               projects.add({
                 'id': key,
                 'title': project['title'] ?? 'Untitled Project',
-                'status': project['status'] ?? 'In Progress',
+                'status': project['status'] ?? 'inProgress',
                 'progress': (project['progress'] ?? 0).toString() + '%',
-                'color': project['status'] == 'Review' ? Colors.orange : Colors.blue,
+                'color': project['status'] == 'pending' ? Colors.orange : Colors.blue,
               });
             }
           });
@@ -60,7 +60,7 @@ class ArchitectDashboardController extends GetxController {
         }
       });
 
-      // Fetch pending reviews (assuming stored in user/architect/<uid>/pendingReviews)
+      // Fetch pending reviews
       final userRef = _database.child('users/architect/$architectUid');
       userRef.onValue.listen((event) {
         final data = event.snapshot.value as Map<dynamic, dynamic>?;
@@ -69,7 +69,7 @@ class ArchitectDashboardController extends GetxController {
         }
       });
 
-      // Fetch new messages (unread messages)
+      // Fetch new messages
       final messagesRef = _database.child('messages/$architectUid');
       messagesRef.onValue.listen((event) {
         final data = event.snapshot.value as Map<dynamic, dynamic>?;
@@ -86,10 +86,51 @@ class ArchitectDashboardController extends GetxController {
           newMessages.value = 0;
         }
       });
+
+      // Fetch designs (new feature for architect integration)
+      final designsRef = _database.child('designs/$architectUid');
+      designsRef.onValue.listen((event) {
+        final data = event.snapshot.value as Map<dynamic, dynamic>?;
+        if (data != null) {
+          final designs = <Map<String, dynamic>>[];
+          data.forEach((key, value) {
+            final design = Map<String, dynamic>.from(value);
+            designs.add({
+              'id': key,
+              'projectId': design['projectId'],
+              'title': design['title'] ?? 'Untitled Design',
+              'version': design['version'] ?? '1.0',
+              'status': design['status'] ?? 'Draft',
+            });
+          });
+          designsList.assignAll(designs);
+        }
+      });
     } catch (e) {
       Get.snackbar('Error', 'Failed to fetch data: $e');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  // Method to upload a new design (for version control)
+  Future<void> uploadDesign(String projectId, String title, String fileUrl) async {
+    try {
+      final architectUid = _authController.currentUser.value?.uid;
+      if (architectUid == null) return;
+
+      final designRef = _database.child('designs/$architectUid').push();
+      await designRef.set({
+        'projectId': projectId,
+        'title': title,
+        'fileUrl': fileUrl,
+        'version': '1.0', // Initial version
+        'status': 'Draft',
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+      Get.snackbar('Success', 'Design uploaded successfully');
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to upload design: $e');
     }
   }
 }
@@ -101,8 +142,7 @@ class ArchitectDashboard extends StatefulWidget {
   State<ArchitectDashboard> createState() => _ArchitectDashboardState();
 }
 
-class _ArchitectDashboardState extends State<ArchitectDashboard>
-    with SingleTickerProviderStateMixin {
+class _ArchitectDashboardState extends State<ArchitectDashboard> with SingleTickerProviderStateMixin {
   final AuthController _authController = Get.find<AuthController>();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -132,47 +172,33 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15)),
-          title: const Text('Sign Out',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
           content: const Text('Are you sure you want to sign out?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child:
-              Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+              child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('Sign Out',
-                  style: TextStyle(color: Colors.white)),
+              child: const Text('Sign Out', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
       },
-    ) ??
-        false;
+    ) ?? false;
 
     if (confirm) {
       try {
         await _authController.signOut();
         Get.offAllNamed('/stakeholder');
       } catch (e) {
-        Get.snackbar(
-          'Error',
-          'Failed to sign out: ${e.toString()}',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.9),
-          colorText: Colors.white,
-          borderRadius: 10,
-          margin: const EdgeInsets.all(10),
-        );
+        Get.snackbar('Error', 'Failed to sign out: $e', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
       }
     }
   }
@@ -187,17 +213,11 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
         opacity: _fadeAnimation,
         child: Obx(() {
           if (_dashboardController.isLoading.value) {
-            return const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2196F3)),
-              ),
-            );
+            return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2196F3))));
           }
           final userData = _authController.currentUser.value;
           if (userData == null) {
-            return const Center(
-              child: Text('User not authenticated'),
-            );
+            return const Center(child: Text('User not authenticated'));
           }
           return _buildBody(userData);
         }),
@@ -207,10 +227,7 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      systemOverlayStyle: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
+      systemOverlayStyle: const SystemUiOverlayStyle(statusBarColor: Colors.transparent, statusBarIconBrightness: Brightness.dark),
       backgroundColor: Colors.white,
       elevation: 0,
       leading: Builder(
@@ -230,8 +247,7 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
     return Stack(
       children: [
         IconButton(
-          icon: const Icon(Icons.notifications_outlined,
-              color: Color(0xFF1E1E1E)),
+          icon: const Icon(Icons.notifications_outlined, color: Color(0xFF1E1E1E)),
           onPressed: () {},
         ),
         Positioned(
@@ -239,21 +255,11 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
           top: 8,
           child: Obx(() => Container(
             padding: const EdgeInsets.all(2),
-            decoration: const BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
-            ),
-            constraints: const BoxConstraints(
-              minWidth: 16,
-              minHeight: 16,
-            ),
+            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
             child: Text(
               _dashboardController.newMessages.value.toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
           )),
@@ -270,10 +276,7 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
         radius: 18,
         child: Text(
           _authController.currentUser.value?.email?[0].toUpperCase() ?? 'A',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -282,7 +285,7 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
   Widget _buildBody(userData) {
     return RefreshIndicator(
       onRefresh: () async {
-      //  await _dashboardController._fetchDashboardData();
+        _dashboardController._fetchDashboardData();
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -299,6 +302,10 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
               const SizedBox(height: 16),
               _buildProjectsGrid(),
               const SizedBox(height: 24),
+              _buildSectionTitle('Design Management'), // New section
+              const SizedBox(height: 16),
+              _buildDesignsGrid(), // New grid for designs
+              const SizedBox(height: 24),
               _buildSectionTitle('Quick Actions'),
               const SizedBox(height: 16),
               _buildActionsGrid(),
@@ -313,19 +320,9 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1976D2), Color(0xFF2196F3)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: const LinearGradient(colors: [Color(0xFF1976D2), Color(0xFF2196F3)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E88E5).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: const Color(0xFF1E88E5).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
       ),
       child: Material(
         color: Colors.transparent,
@@ -343,36 +340,16 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Welcome back!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                          ),
+                          Text('Welcome back!', style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.9))),
                           const SizedBox(height: 8),
-                          Text(
-                            userData.email ?? 'Architect',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                          Text(userData.email ?? 'Architect', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
                         ],
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.architecture,
-                        color: Colors.white,
-                        size: 24,
-                      ),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                      child: const Icon(Icons.architecture, color: Colors.white, size: 24),
                     ),
                   ],
                 ),
@@ -387,67 +364,31 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
   Widget _buildQuickStats() {
     return Row(
       children: [
-        Obx(() => _buildStatCard(
-          'Active\nProjects',
-          _dashboardController.activeProjects.value.toString(),
-          Icons.architecture,
-          Colors.blue,
-        )),
+        Obx(() => _buildStatCard('Active\nProjects', _dashboardController.activeProjects.value.toString(), Icons.architecture, Colors.blue)),
         const SizedBox(width: 12),
-        Obx(() => _buildStatCard(
-          'Pending\nReviews',
-          _dashboardController.pendingReviews.value.toString(),
-          Icons.rate_review,
-          Colors.orange,
-        )),
+        Obx(() => _buildStatCard('Pending\nReviews', _dashboardController.pendingReviews.value.toString(), Icons.rate_review, Colors.orange)),
         const SizedBox(width: 12),
-        Obx(() => _buildStatCard(
-          'New\nMessages',
-          _dashboardController.newMessages.value.toString(),
-          Icons.message,
-          Colors.green,
-        )),
+        Obx(() => _buildStatCard('New\nMessages', _dashboardController.newMessages.value.toString(), Icons.message, Colors.green)),
       ],
     );
   }
 
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: color.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Column(
           children: [
             Icon(icon, color: color, size: 24),
             const SizedBox(height: 12),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                height: 1.2,
-              ),
-            ),
+            Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.2)),
           ],
         ),
       ),
@@ -455,14 +396,7 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF1E1E1E),
-      ),
-    );
+    return Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)));
   }
 
   Widget _buildProjectsGrid() {
@@ -473,87 +407,44 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.5,
-        ),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.5),
         itemCount: _dashboardController.projectsList.length,
         itemBuilder: (context, index) {
           final project = _dashboardController.projectsList[index];
-          return _buildProjectCard(
-            project['title'],
-            project['status'],
-            project['progress'],
-            project['color'],
-          );
+          return _buildProjectCard(project['title'], project['status'], project['progress'], project['color']);
         },
       );
     });
   }
 
-  Widget _buildProjectCard(
-      String title, String status, String progress, Color color) {
+  Widget _buildProjectCard(String title, String status, String progress, Color color) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: color.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {},
+          onTap: () => Get.toNamed('/view-project-plans'), // Navigate to detailed view
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        status,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: color,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                      child: Text(status, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500)),
                     ),
                     const Spacer(),
-                    Text(
-                      progress,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: color,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text(progress, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -571,43 +462,107 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
     );
   }
 
+  Widget _buildDesignsGrid() { // New method for design management
+    return Obx(() {
+      if (_dashboardController.designsList.isEmpty) {
+        return const Center(child: Text('No designs uploaded yet'));
+      }
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.5),
+        itemCount: _dashboardController.designsList.length,
+        itemBuilder: (context, index) {
+          final design = _dashboardController.designsList[index];
+          return _buildDesignCard(design['title'], design['version'], design['status'], design['projectId']);
+        },
+      );
+    });
+  }
+
+  Widget _buildDesignCard(String title, String version, String status, String projectId) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showDesignUploadDialog(projectId), // Allow updating design
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('Version: $version', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  child: Text(status, style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.w500)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDesignUploadDialog(String projectId) { // New dialog for uploading designs
+    final titleController = TextEditingController();
+    final fileUrlController = TextEditingController(); // Placeholder for file URL (e.g., from Firebase Storage)
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Upload Design'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(labelText: 'Design Title'),
+            ),
+            TextField(
+              controller: fileUrlController,
+              decoration: const InputDecoration(labelText: 'Design File URL'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await _dashboardController.uploadDesign(projectId, titleController.text, fileUrlController.text);
+              Navigator.pop(context);
+            },
+            child: const Text('Upload'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildActionsGrid() {
     final List<Map<String, dynamic>> actions = [
-      {
-        'title': 'View Plans',
-        'icon': Icons.architecture,
-        'color': const Color(0xFF2196F3),
-        'onTap': () => Get.toNamed('/view-project-plans'),
-      },
-      {
-        'title': 'Consultations',
-        'icon': Icons.people_outline,
-        'color': const Color(0xFF4CAF50),
-        'onTap': () => Get.toNamed('/consult-homeowners'),
-      },
-      {
-        'title': 'Reviews',
-        'icon': Icons.rate_review_outlined,
-        'color': const Color(0xFFFFC107),
-        'onTap': () => Get.toNamed('/review-contractor-tasks'),
-      },
-      {
-        'title': 'Messages',
-        'icon': Icons.message_outlined,
-        'color': const Color(0xFFE91E63),
-        'onTap': () => Get.toNamed('/architect-messages'),
-      },
+      {'title': 'View Plans', 'icon': Icons.architecture, 'color': const Color(0xFF2196F3), 'onTap': () => Get.toNamed('/view-project-plans')},
+      {'title': 'Consultations', 'icon': Icons.people_outline, 'color': const Color(0xFF4CAF50), 'onTap': () => Get.toNamed('/consult-homeowners')},
+      {'title': 'Reviews', 'icon': Icons.rate_review_outlined, 'color': const Color(0xFFFFC107), 'onTap': () => Get.toNamed('/review-contractor-tasks')},
+      {'title': 'Messages', 'icon': Icons.message_outlined, 'color': const Color(0xFFE91E63), 'onTap': () => Get.toNamed('/architect-messages')},
     ];
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.3,
-      ),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.3),
       itemCount: actions.length,
       itemBuilder: (context, index) => _buildActionCard(actions[index]),
     );
@@ -618,13 +573,7 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: action['color'].withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: action['color'].withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Material(
         color: Colors.transparent,
@@ -636,25 +585,11 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: action['color'].withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  action['icon'],
-                  color: action['color'],
-                  size: 28,
-                ),
+                decoration: BoxDecoration(color: action['color'].withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(action['icon'], color: action['color'], size: 28),
               ),
               const SizedBox(height: 12),
-              Text(
-                action['title'],
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: action['color'].withOpacity(0.8),
-                ),
-              ),
+              Text(action['title'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: action['color'].withOpacity(0.8))),
             ],
           ),
         ),
@@ -672,63 +607,15 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  _buildDrawerItem(
-                    icon: Icons.dashboard_outlined,
-                    title: 'Dashboard',
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.architecture,
-                    title: 'View Plans',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Get.toNamed('/view-project-plans');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.people_outline,
-                    title: 'Consultations',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Get.toNamed('/consult-homeowners');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.rate_review_outlined,
-                    title: 'Reviews',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Get.toNamed('/review-contractor-tasks');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.message_outlined,
-                    title: 'Messages',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Get.toNamed('/architect-messages');
-                    },
-                  ),
+                  _buildDrawerItem(icon: Icons.dashboard_outlined, title: 'Dashboard', onTap: () => Navigator.pop(context)),
+                  _buildDrawerItem(icon: Icons.architecture, title: 'View Plans', onTap: () { Navigator.pop(context); Get.toNamed('/view-project-plans'); }),
+                  _buildDrawerItem(icon: Icons.people_outline, title: 'Consultations', onTap: () { Navigator.pop(context); Get.toNamed('/consult-homeowners'); }),
+                  _buildDrawerItem(icon: Icons.rate_review_outlined, title: 'Reviews', onTap: () { Navigator.pop(context); Get.toNamed('/review-contractor-tasks'); }),
+                  _buildDrawerItem(icon: Icons.message_outlined, title: 'Messages', onTap: () { Navigator.pop(context); Get.toNamed('/architect-messages'); }),
                   const Divider(height: 32),
-                  _buildDrawerItem(
-                    icon: Icons.settings_outlined,
-                    title: 'Settings',
-                    onTap: () {},
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.help_outline,
-                    title: 'Help & Support',
-                    onTap: () {},
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.logout,
-                    title: 'Sign Out',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _handleSignOut();
-                    },
-                    color: Colors.red,
-                  ),
+                  _buildDrawerItem(icon: Icons.settings_outlined, title: 'Settings', onTap: () {}),
+                  _buildDrawerItem(icon: Icons.help_outline, title: 'Help & Support', onTap: () {}),
+                  _buildDrawerItem(icon: Icons.logout, title: 'Sign Out', onTap: () { Navigator.pop(context); _handleSignOut(); }, color: Colors.red),
                 ],
               ),
             ),
@@ -741,89 +628,36 @@ class _ArchitectDashboardState extends State<ArchitectDashboard>
   Widget _buildDrawerHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.grey.withOpacity(0.2),
-            width: 1,
-          ),
-        ),
-      ),
+      decoration: BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 1))),
       child: Column(
         children: [
           Container(
             width: 80,
             height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF2196F3).withOpacity(0.1),
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.architecture,
-                size: 40,
-                color: Color(0xFF2196F3),
-              ),
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF2196F3).withOpacity(0.1)),
+            child: const Center(child: Icon(Icons.architecture, size: 40, color: Color(0xFF2196F3))),
           ),
           const SizedBox(height: 16),
-          Text(
-            _authController.currentUser.value?.email ?? 'Architect',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          Text(_authController.currentUser.value?.email ?? 'Architect', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
           const SizedBox(height: 4),
-          Text(
-            'Professional Architect',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text('Professional Architect', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
         ],
       ),
     );
   }
 
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color? color,
-  }) {
+  Widget _buildDrawerItem({required IconData icon, required String title, required VoidCallback onTap, Color? color}) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: color ?? const Color(0xFF1976D2),
-        size: 24,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: color ?? const Color(0xFF1E1E1E),
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
+      leading: Icon(icon, color: color ?? const Color(0xFF1976D2), size: 24),
+      title: Text(title, style: TextStyle(color: color ?? const Color(0xFF1E1E1E), fontSize: 16, fontWeight: FontWeight.w500)),
       onTap: onTap,
       dense: true,
       horizontalTitleGap: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 4,
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 }
-
-
 
 
 

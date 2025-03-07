@@ -1,15 +1,471 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
-import 'package:buildbuddy/Controllers/adminController.dart';
 import 'package:buildbuddy/Controllers/authControllers.dart';
-import 'package:buildbuddy/Controllers/chatController.dart'; // Main ChatController
+import 'package:buildbuddy/Models/userModels.dart';
+
+// Core App Screens
+import '../Views/DashBoard/Architect/ConsultWithHomeowners.dart';
+import '../Views/DashBoard/Architect/ReviewContractorTasks.dart';
+import '../Views/DashBoard/HomeOwner/Help&SupportDashboard.dart';
+import '../Views/DashBoard/HomeOwner/NotificationsDashboard.dart';
+import '../Views/DashBoard/HomeOwner/Rate&ReviewDashboard.dart';
+import '../Views/DashBoard/HomeOwner/chat_screen.dart' as ChatScreenImport;
+import '../Views/DashBoard/HomeOwner/findProfessionals.dart';
+import '../Views/DashBoard/HomeOwner/myProjects.dart';
+import '../Views/DashBoard/HomeOwner/payments&InvoicesDashboard.dart';
+import '../Views/DashBoard/HomeOwner/settings.dart';
+import '../Views/Login/boardingScreen.dart';
+import '../Views/Login/startedScreen.dart';
+import '../Views/Login/welcomeScreen.dart';
+import '../Views/Login/loginPage.dart';
+import '../Views/Login/signUP.dart';
+import '../Views/Login/forgotPassword.dart';
+import '../Views/Login/splashScreen.dart';
+
+// Stakeholder Selection
+import '../Views/DashBoard/stakeHolderSelection.dart';
+
+// Dashboard Screens
+import '../Views/DashBoard/Admin.dart' as AdminDashboard;
+import '../Views/DashBoard/HomeOwner.dart';
+import '../Views/DashBoard/Constructor.dart' as ConstructorDashboard;
+import '../Views/DashBoard/Architect.dart';
+import '../Views/DashBoard/Vendor.dart';
+
+// Contractor Screens
+import '../Views/DashBoard/Contractor/manageProjects.dart';
+import '../Views/DashBoard/Contractor/materialOrders.dart';
+import '../Views/DashBoard/Contractor/messages.dart';
+import '../Views/DashBoard/Contractor/Payments.dart';
+import '../Views/DashBoard/Contractor/RatingAndReviews.dart';
+import '../Views/DashBoard/Contractor/chatContractor/contractor_chat_screen.dart';
+import 'package:buildbuddy/Views/DashBoard/Contractor/materialOrders.dart' as contractor;
+
+// Vendor Screens
+import '../Views/DashBoard/Vendor/ordersScreen.dart';
+import '../Views/DashBoard/Vendor/invoicesScreen.dart';
+import '../Views/DashBoard/Vendor/manageProductsScreen.dart';
+import '../Views/DashBoard/Vendor/analytics.dart';
+import '../Views/DashBoard/Vendor/notifications.dart';
+import '../Views/DashBoard/Vendor/support.dart';
+import '../Views/DashBoard/Vendor/messageScreen.dart';
+import '../Views/DashBoard/Vendor/Ratings&ReviewsScreen.dart';
+import 'package:buildbuddy/Views/DashBoard/Vendor/ordersScreen.dart' as vendor;
+
+// Admin Screens
+import '../Views/Login/AdminSignUp.dart';
+import '../Views/DashBoard/Admin/userManagement.dart';
+import '../Views/DashBoard/Admin/projectMonitoring.dart';
+import '../Views/DashBoard/Admin/reports.dart';
+import '../Views/DashBoard/Admin/contentManagement.dart';
+import '../Views/DashBoard/Admin/settings.dart';
+import '../Views/DashBoard/Admin/support.dart';
+
+// Architect Screens
+import '../Views/DashBoard/Architect/viewProjectPlans.dart';
+
+// Chat Screen with alias to avoid conflict
+import '../Views/DashBoard/chatScreen.dart' as ChatScreenImport;
+
+// Custom middleware for role-based access control
+class RoleBasedMiddleware extends GetMiddleware {
+  final UserRole requiredRole;
+
+  RoleBasedMiddleware(this.requiredRole, {super.priority = 1});
+
+  @override
+  RouteSettings? redirect(String? route) {
+    final authController = Get.find<AuthController>();
+    final userData = authController.currentUser.value; // Use cached/reactive user data
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || userData == null) {
+      Get.snackbar('Unauthorized', 'Please sign in as a ${requiredRole.name}');
+      return const RouteSettings(name: '/stakeholder');
+    }
+
+    switch (requiredRole) {
+      case UserRole.admin:
+        if (userData.role != UserRole.admin) {
+          Get.snackbar('Unauthorized', 'Only admins can access this page');
+          return const RouteSettings(name: '/stakeholder');
+        }
+        break;
+      case UserRole.homeowner:
+        if (userData.role != UserRole.homeowner) {
+          Get.snackbar('Unauthorized', 'Only homeowners can access this page');
+          return const RouteSettings(name: '/stakeholder');
+        }
+        break;
+      case UserRole.contractor:
+        if (userData.role != UserRole.contractor) {
+          Get.snackbar('Unauthorized', 'Only contractors can access this page');
+          return const RouteSettings(name: '/stakeholder');
+        }
+        break;
+      case UserRole.architect:
+        if (userData.role != UserRole.architect) {
+          Get.snackbar('Unauthorized', 'Only architects can access this page');
+          return const RouteSettings(name: '/stakeholder');
+        }
+        break;
+      case UserRole.vendor:
+        if (userData.role != UserRole.vendor) {
+          Get.snackbar('Unauthorized', 'Only vendors can access this page');
+          return const RouteSettings(name: '/stakeholder');
+        }
+        break;
+    }
+    return null; // Allow navigation if role matches
+  }
+}
+
+class AppRoutes {
+  static final getPages = [
+    // Core App Screens
+    GetPage(name: '/boarding', page: () => const BoardingScreen()),
+    GetPage(name: '/', page: () => SplashScreen()),
+    GetPage(name: '/welcome', page: () => const WelcomeScreen()),
+    GetPage(
+      name: '/get-started',
+      page: () => const GetStartedScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(name: '/sign-in', page: () => const SignInScreen()),
+    GetPage(name: '/sign-up', page: () => const SignUpScreen()),
+    GetPage(name: '/forgot-password', page: () => const ForgotPasswordScreen()),
+
+    // Stakeholder Selection
+    GetPage(name: '/stakeholder', page: () => const StakeholderSelection()),
+
+    // Admin Routes (Restricted to admin users)
+    GetPage(
+      name: '/adminSignIn',
+      page: () => const AdminSignInScreen(),
+    ),
+    GetPage(
+      name: '/adminDashboard',
+      page: () => const AdminDashboard.AdminDashboard(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.admin),
+      ],
+    ),
+    GetPage(
+      name: '/user-management',
+      page: () => UserManagement(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.admin),
+      ],
+    ),
+    GetPage(
+      name: '/project-monitoring',
+      page: () => ProjectMonitoring(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.admin),
+      ],
+    ),
+    GetPage(
+      name: '/reports',
+      page: () => Reports(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.admin),
+      ],
+    ),
+    GetPage(
+      name: '/content-management',
+      page: () => ContentManagement(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.admin),
+      ],
+    ),
+    GetPage(
+      name: '/settings',
+      page: () => Settings(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.admin),
+      ],
+    ),
+    GetPage(
+      name: '/support',
+      page: () => Support(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.admin),
+      ],
+    ),
+    GetPage(
+      name: '/admin-chat',
+      page: () => ChatScreenImport.ChatScreen(projectId: '', projectTitle: ''),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.admin),
+      ],
+    ),
+
+    // HomeOwner Dashboard (Restricted to homeowners)
+    GetPage(
+      name: '/homeowner-dashboard',
+      page: () => const HomeOwnerDashboard(),
+      transition: Transition.fadeIn,
+      middlewares: [
+        RoleBasedMiddleware(UserRole.homeowner),
+      ],
+    ),
+    GetPage(
+      name: '/find-professionals',
+      page: () => const FindProfessionalsDashboard(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.homeowner),
+      ],
+    ),
+    GetPage(
+      name: '/settings',
+      page: () => const SettingsDashboard(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.homeowner),
+      ],
+    ),
+    GetPage(
+      name: '/my-projects',
+      page: () {
+        final userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
+        return MyProjectsDashboard(userType: 'homeowner');
+      },
+      middlewares: [
+        RoleBasedMiddleware(UserRole.homeowner),
+      ],
+    ),
+    GetPage(
+      name: '/payments',
+      page: () => const PaymentsDashboard(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.homeowner),
+      ],
+    ),
+    GetPage(
+      name: '/rate-review',
+      page: () => const RateReviewDashboard(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.homeowner),
+      ],
+    ),
+    GetPage(
+      name: '/notifications',
+      page: () => const NotificationsDashboard(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.homeowner),
+      ],
+    ),
+    GetPage(
+      name: '/support',
+      page: () => const SupportDashboard(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.homeowner),
+      ],
+    ),
+    GetPage(
+      name: '/homeowner-chat',
+      page: () => ChatScreenImport.ChatScreen(projectId: '', projectTitle: ''),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.homeowner),
+      ],
+    ),
+
+    // Contractor Dashboard (Restricted to contractors)
+    GetPage(
+      name: '/contractor-dashboard',
+      page: () => const ConstructorDashboard.ContractorDashboard(),
+      transition: Transition.fadeIn,
+      middlewares: [
+        RoleBasedMiddleware(UserRole.contractor),
+      ],
+    ),
+    GetPage(
+      name: '/manage-projects',
+      page: () => const ManageProjectsScreen(userType: 'contractor'),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.contractor),
+      ],
+    ),
+    GetPage(
+      name: '/vendor-orders',
+      page: () => vendor.MaterialOrdersScreen(), // Use the vendor version
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+    GetPage(
+      name: '/contractor-messages',
+      page: () {
+        // Redirect to ManageProjectsScreen for project selection
+        return const ManageProjectsScreen(userType: 'contractor');
+      },
+      middlewares: [
+        RoleBasedMiddleware(UserRole.contractor),
+      ],
+    ),
+//////////////
+    GetPage(
+      name: '/material-orders',
+      page: () => const contractor.MaterialOrdersScreen(), // Use contractor version
+      middlewares: [
+        RoleBasedMiddleware(UserRole.contractor),
+      ],
+    ),
+    ///////////////
+    GetPage(
+      name: '/contractor-payments',
+      page: () => const PaymentsScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.contractor),
+      ],
+    ),
+    GetPage(
+      name: '/contractor-reviews',
+      page: () => RatingsReviewsScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.contractor),
+      ],
+    ),
+
+    // Architect Dashboard (Restricted to architects)
+    GetPage(
+      name: '/architect-dashboard',
+      page: () => const ArchitectDashboard(),
+      transition: Transition.fadeIn,
+      middlewares: [
+        RoleBasedMiddleware(UserRole.architect),
+      ],
+    ),
+
+
+    GetPage(
+      name: '/architect-chat',
+      page: () => ChatScreenImport.ChatScreen(projectId: '', projectTitle: ''),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.architect),
+      ],
+    ),
+    GetPage(
+      name: '/view-project-plans',
+      page: () => const ViewProjectPlansScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.architect),
+      ],
+    ),
+    GetPage(
+      name: '/consult-homeowners',
+      page: () => const ConsultHomeownersScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.architect),
+      ],
+    ),
+    GetPage(
+      name: '/review-contractor-tasks',
+      page: () => ReviewContractorTasksScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.architect),
+      ],
+    ),
+
+    // Vendor Dashboard (Restricted to vendors)
+    GetPage(
+      name: '/vendor-dashboard',
+      page: () => const VendorDashboard(),
+      transition: Transition.fadeIn,
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+    /*GetPage(
+      name: '/vendor-orders',
+      page: () => MaterialOrdersScreen(), // Use MaterialOrdersScreen
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),*/
+    GetPage(
+      name: '/vendor-payments',
+      page: () => VendorInvoicesScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+    GetPage(
+      name: '/manage-products',
+      page: () => ManageProductsScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+    GetPage(
+      name: '/vendor-messages',
+      page: () => VendorMessages(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+    GetPage(
+      name: '/vendor-reviews',
+      page: () => ReviewVendorTasksScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+    GetPage(
+      name: '/vendor-analytics',
+      page: () => VendorAnalyticsScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+    GetPage(
+      name: '/vendor-notifications',
+      page: () => VendorNotificationsScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+    GetPage(
+      name: '/vendor-support',
+      page: () => VendorSupportScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+  ];
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:get/get.dart';
+import 'package:buildbuddy/Controllers/AdminController.dart';
+import 'package:buildbuddy/Controllers/authControllers.dart';
+import 'package:buildbuddy/Controllers/chatController.dart';
 import 'package:buildbuddy/Controllers/contractorController.dart';
 import 'package:buildbuddy/Controllers/vendorController.dart';
 import 'package:buildbuddy/Models/userModels.dart';
 import 'package:provider/provider.dart';
 
 // Core App Screens
+import '../Views/DashBoard/Architect/ConsultWithHomeowners.dart';
+import '../Views/DashBoard/Architect/ReviewContractorTasks.dart';
 import '../Views/DashBoard/HomeOwner/Help&SupportDashboard.dart';
 import '../Views/DashBoard/HomeOwner/NotificationsDashboard.dart';
 import '../Views/DashBoard/HomeOwner/Rate&ReviewDashboard.dart';
@@ -63,6 +519,9 @@ import '../Views/DashBoard/Admin/reports.dart';
 import '../Views/DashBoard/Admin/contentManagement.dart';
 import '../Views/DashBoard/Admin/settings.dart';
 import '../Views/DashBoard/Admin/support.dart';
+
+// Architect Screens
+import '../Views/DashBoard/Architect/viewProjectPlans.dart'; // Newly added screen
 
 // Chat Screen with alias to avoid conflict
 import '../Views/DashBoard/chatScreen.dart' as ChatScreenImport;
@@ -194,7 +653,8 @@ class AppRoutes {
     ),
     GetPage(
       name: '/admin-chat',
-      page: () => _buildAdminScreen<ChatScreenImport.ChatScreen>(ChatScreenImport.ChatScreen(projectId: '', projectTitle: '',)),
+      page: () => _buildAdminScreen<ChatScreenImport.ChatScreen>(
+          ChatScreenImport.ChatScreen(projectId: '', projectTitle: '')),
       middlewares: [
         RoleBasedMiddleware(UserRole.admin),
       ],
@@ -263,7 +723,8 @@ class AppRoutes {
     ),
     GetPage(
       name: '/homeowner-chat',
-      page: () => _buildHomeownerScreen<ChatScreenImport.ChatScreen>(ChatScreenImport.ChatScreen(projectId: '', projectTitle: '',)),
+      page: () => _buildHomeownerScreen<ChatScreenImport.ChatScreen>(
+          ChatScreenImport.ChatScreen(projectId: '', projectTitle: '')),
       middlewares: [
         RoleBasedMiddleware(UserRole.homeowner),
       ],
@@ -285,13 +746,15 @@ class AppRoutes {
         RoleBasedMiddleware(UserRole.contractor),
       ],
     ),
-    /*GetPage(
+    */
+/*GetPage(
       name: '/material-orders',
       page: () => const MaterialOrdersScreen(),
       middlewares: [
         RoleBasedMiddleware(UserRole.contractor),
       ],
-    ),*/
+    ),*//*
+
     GetPage(
       name: '/contractor-messages',
       page: () {
@@ -328,11 +791,21 @@ class AppRoutes {
     ),
     GetPage(
       name: '/architect-chat',
-      page: () => _buildArchitectScreen<ChatScreenImport.ChatScreen>(ChatScreenImport.ChatScreen(projectId: '', projectTitle: '',)),
+      page: () => _buildArchitectScreen<ChatScreenImport.ChatScreen>(
+          ChatScreenImport.ChatScreen(projectId: '', projectTitle: '')),
       middlewares: [
         RoleBasedMiddleware(UserRole.architect),
       ],
     ),
+    GetPage(
+      name: '/view-project-plans',
+      page: () => const ViewProjectPlansScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.architect),
+      ],
+    ),
+    GetPage(name: '/consult-homeowners', page: () => const ConsultHomeownersScreen(), middlewares: [RoleBasedMiddleware(UserRole.architect)]),
+    GetPage(name: '/review-contractor-tasks', page: () => ReviewContractorTasksScreen(), middlewares: [RoleBasedMiddleware(UserRole.architect)]),
 
     // Vendor Dashboard (Restricted to vendors)
     GetPage(
@@ -343,13 +816,15 @@ class AppRoutes {
         RoleBasedMiddleware(UserRole.vendor),
       ],
     ),
-    /*GetPage(
+    */
+/*GetPage(
       name: '/vendor-orders',
       page: () => VendorOrdersScreen(),
       middlewares: [
         RoleBasedMiddleware(UserRole.vendor),
       ],
-    ),*/
+    ),*//*
+
     GetPage(
       name: '/vendor-payments',
       page: () => VendorInvoicesScreen(),
@@ -366,7 +841,8 @@ class AppRoutes {
     ),
     GetPage(
       name: '/vendor-messages',
-      page: () => _buildVendorScreen<ChatScreenImport.ChatScreen>(ChatScreenImport.ChatScreen(projectId: '', projectTitle: '',)),
+      page: () => _buildVendorScreen<ChatScreenImport.ChatScreen>(
+          ChatScreenImport.ChatScreen(projectId: '', projectTitle: '')),
       middlewares: [
         RoleBasedMiddleware(UserRole.vendor),
       ],
@@ -410,10 +886,12 @@ class AppRoutes {
     return MultiProvider(
       providers: [
         Provider<AdminController>.value(
-          value: Provider.of<AdminController>(context, listen: false) ?? AdminController(Get.find<AuthController>()),
+          value: Provider.of<AdminController>(context, listen: false) ??
+              AdminController(Get.find<AuthController>()),
         ),
         Provider<ChatController>.value(
-          value: Provider.of<ChatController>(context, listen: false) ?? ChatController(),
+          value: Provider.of<ChatController>(context, listen: false) ??
+              ChatController(),
         ),
       ],
       child: screen,
@@ -427,7 +905,8 @@ class AppRoutes {
       throw Exception('Get.context is null. Ensure Get is initialized properly.');
     }
     return Provider<ChatController>.value(
-      value: Provider.of<ChatController>(context, listen: false) ?? ChatController(),
+      value: Provider.of<ChatController>(context, listen: false) ??
+          ChatController(),
       child: screen,
     );
   }
@@ -441,10 +920,12 @@ class AppRoutes {
     return MultiProvider(
       providers: [
         Provider<ContractorController>.value(
-          value: Provider.of<ContractorController>(context, listen: false) ?? ContractorController(Get.find<AuthController>()),
+          value: Provider.of<ContractorController>(context, listen: false) ??
+              ContractorController(Get.find<AuthController>()),
         ),
         Provider<ChatController>.value(
-          value: Provider.of<ChatController>(context, listen: false) ?? ChatController(),
+          value: Provider.of<ChatController>(context, listen: false) ??
+              ChatController(),
         ),
       ],
       child: screen,
@@ -458,7 +939,8 @@ class AppRoutes {
       throw Exception('Get.context is null. Ensure Get is initialized properly.');
     }
     return Provider<ChatController>.value(
-      value: Provider.of<ChatController>(context, listen: false) ?? ChatController(),
+      value: Provider.of<ChatController>(context, listen: false) ??
+          ChatController(),
       child: screen,
     );
   }
@@ -472,10 +954,12 @@ class AppRoutes {
     return MultiProvider(
       providers: [
         Provider<VendorController>.value(
-          value: Provider.of<VendorController>(context, listen: false) ?? VendorController(Get.find<AuthController>()),
+          value: Provider.of<VendorController>(context, listen: false) ??
+              VendorController(Get.find<AuthController>()),
         ),
         Provider<ChatController>.value(
-          value: Provider.of<ChatController>(context, listen: false) ?? ChatController(),
+          value: Provider.of<ChatController>(context, listen: false) ??
+              ChatController(),
         ),
       ],
       child: screen,
@@ -483,8 +967,7 @@ class AppRoutes {
   }
 }
 
-
-
+*/
 
 
 

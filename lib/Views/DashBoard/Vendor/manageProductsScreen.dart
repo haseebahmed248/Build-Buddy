@@ -1,4 +1,253 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:buildbuddy/Controllers/vendorController.dart';
+
+class ManageProductsScreen extends StatefulWidget {
+  @override
+  _ManageProductsScreenState createState() => _ManageProductsScreenState();
+}
+
+class _ManageProductsScreenState extends State<ManageProductsScreen> {
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'In Stock':
+        return const Color(0xFF2ECC71);
+      case 'Low Stock':
+        return const Color(0xFFF1C40F);
+      case 'Out of Stock':
+        return const Color(0xFFE74C3C);
+      default:
+        return const Color(0xFF95A5A6);
+    }
+  }
+
+  void _showEditDialog(VendorController controller, String productId, Map<String, dynamic> product) {
+    final nameController = TextEditingController(text: product['name']);
+    final priceController = TextEditingController(text: product['price'].toString());
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Product'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Product Name')),
+              const SizedBox(height: 16),
+              TextField(controller: priceController, decoration: const InputDecoration(labelText: 'Price')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
+          TextButton(
+            child: const Text('Save'),
+            onPressed: () async {
+              await controller.updateProduct(productId, {
+                'name': nameController.text,
+                'price': double.parse(priceController.text),
+              });
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddProductDialog(VendorController controller) {
+    final nameController = TextEditingController();
+    final priceController = TextEditingController();
+    final statusController = TextEditingController(text: 'In Stock');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Product'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Product Name')),
+              const SizedBox(height: 16),
+              TextField(controller: priceController, decoration: const InputDecoration(labelText: 'Price')),
+              const SizedBox(height: 16),
+              TextField(controller: statusController, decoration: const InputDecoration(labelText: 'Status')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
+          TextButton(
+            child: const Text('Add'),
+            onPressed: () async {
+              await controller.addProduct({
+                'name': nameController.text,
+                'price': double.parse(priceController.text),
+                'status': statusController.text,
+                'date': DateTime.now().toIso8601String(),
+              });
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E3799), Color(0xFF4834DF)]),
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 2))],
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    children: [
+                      IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22), onPressed: () => Navigator.pop(context)),
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(color: Colors.white.withAlpha(60), borderRadius: BorderRadius.circular(12)),
+                                  child: const Icon(Icons.construction, color: Colors.white, size: 28),
+                                ),
+                                const SizedBox(width: 12),
+                                const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Manage Products', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                                    Text('Track and manage your inventory', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            IconButton(icon: const Icon(Icons.filter_list, color: Colors.white), onPressed: () {}),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: Stack(
+        children: [
+          Positioned(top: -100, right: -50, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: Color.fromRGBO(72, 52, 223, 0.1)))),
+          Positioned(bottom: -80, left: -60, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: Color.fromRGBO(30, 55, 153, 0.1)))),
+          Consumer<VendorController>(
+            builder: (context, controller, child) {
+              if (controller.isLoading) return const Center(child: CircularProgressIndicator());
+              final products = controller.vendorData['products'] as Map<dynamic, dynamic>? ?? {};
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: products.length,
+                  itemBuilder: (context, index) {
+                    final productId = products.keys.elementAt(index);
+                    final product = Map<String, dynamic>.from(products[productId]);
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10, offset: const Offset(0, 4))],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Color.fromRGBO(_getStatusColor(product['status']).red, _getStatusColor(product['status']).green, _getStatusColor(product['status']).blue, 0.1),
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: Icon(Icons.work, color: _getStatusColor(product['status']), size: 24),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(product['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E3799))),
+                                    const SizedBox(height: 4),
+                                    Text('Price: \$${product['price']}', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                                    const SizedBox(height: 4),
+                                    Text(product['date'], style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Color.fromRGBO(_getStatusColor(product['status']).red, _getStatusColor(product['status']).green, _getStatusColor(product['status']).blue, 0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(product['status'], style: TextStyle(color: _getStatusColor(product['status']), fontWeight: FontWeight.bold, fontSize: 12)),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Color(0xFF4834DF)),
+                                    onPressed: () => _showEditDialog(controller, productId, product),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddProductDialog(context.read<VendorController>()),
+        child: const Icon(Icons.add),
+        backgroundColor: const Color(0xFF4834DF),
+      ),
+    );
+  }
+}
+
+
+
+
+
+
+
+
+///////////////UI///////////////////
+/*
+import 'package:flutter/material.dart';
 
 class ManageProductsScreen extends StatefulWidget {
   @override
@@ -345,4 +594,4 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
       ),
     );
   }
-}
+}*/
