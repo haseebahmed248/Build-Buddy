@@ -198,11 +198,11 @@ class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProv
   }
 
   Widget _buildQuickStats(VendorController controller) {
-    final products = controller.vendorData['products'] as Map? ?? {};
-    final totalSales = controller.orders.fold<double>(0, (sum, order) => sum + (order.amount ?? 0.0)); // Changed from price to amount
+    final materials = controller.materials; // Changed from vendorData['products'] to controller.materials
+    final totalSales = controller.orders.fold<double>(0, (sum, order) => sum + (order.amount ?? 0.0));
     return Row(
       children: [
-        _buildStatCard('Active\nProducts', '${products.length}', Icons.inventory_2, Colors.blue),
+        _buildStatCard('Active\nMaterials', '${materials.length}', Icons.inventory_2, Colors.blue),
         const SizedBox(width: 12),
         _buildStatCard('Pending\nOrders', '${controller.orders.where((o) => o.status == 'Pending').length}', Icons.shopping_cart, Colors.orange),
         const SizedBox(width: 12),
@@ -232,7 +232,7 @@ class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProv
           _buildActivityCard(
             'Order #${order.id}',
             'Status: ${order.status}',
-            DateFormat('MMM dd, yyyy – HH:mm').format(order.createdAt), // Use createdAt with formatting
+            DateFormat('MMM dd, yyyy – HH:mm').format(order.createdAt),
             Icons.shopping_cart,
             Colors.blue,
           ),

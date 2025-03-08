@@ -1,13 +1,13 @@
-import 'dart:async';
 
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import 'package:buildbuddy/Controllers/authControllers.dart';
 import 'package:buildbuddy/Models/orderModel.dart';
-import 'package:buildbuddy/Models/messageModel.dart';
-
+import 'package:buildbuddy/Models/messageModel.dart' as bbMessage;
+import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import '../Models/userModels.dart';
 
 class VendorController with ChangeNotifier {
@@ -16,20 +16,22 @@ class VendorController with ChangeNotifier {
   final AuthController _authController;
 
   List<Order> _orders = [];
-  List<Message> _messages = [];
+  List<bbMessage.Message> _messages = [];
   Map<String, dynamic> _vendorData = {};
   List<Map<String, dynamic>> _invoices = [];
   List<Map<String, dynamic>> _notifications = [];
   List<Map<String, dynamic>> _tasks = [];
+  List<Map<String, dynamic>> _materials = [];
   bool _isLoading = false;
   String? _errorMessage;
 
   List<Order> get orders => _orders;
-  List<Message> get messages => _messages;
+  List<bbMessage.Message> get messages => _messages;
   Map<String, dynamic> get vendorData => _vendorData;
   List<Map<String, dynamic>> get invoices => _invoices;
   List<Map<String, dynamic>> get notifications => _notifications;
   List<Map<String, dynamic>> get tasks => _tasks;
+  List<Map<String, dynamic>> get materials => _materials;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get currentUserId => _auth.currentUser?.uid;
@@ -40,6 +42,7 @@ class VendorController with ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _invoicesSubscription;
   StreamSubscription<DatabaseEvent>? _notificationsSubscription;
   StreamSubscription<DatabaseEvent>? _tasksSubscription;
+  StreamSubscription<DatabaseEvent>? _materialsSubscription;
 
   VendorController(this._authController) {
     _checkVendorStatus();
@@ -49,16 +52,18 @@ class VendorController with ChangeNotifier {
   void _onAuthStateChanged() => _checkVendorStatus();
 
   void _checkVendorStatus() {
-    if (_authController.currentUser.value?.role == UserRole.vendor) {
+    final user = _authController.currentUser.value;
+    print('Checking vendor status: user=${user?.email}, role=${user?.role}');
+    if (user != null && user.role == UserRole.vendor) {
       _startRealTimeListeners();
     } else {
       _stopRealTimeListeners();
-      _errorMessage = 'User is not a vendor';
+      _errorMessage = 'User is not a vendor or not authenticated';
       notifyListeners();
     }
   }
 
-/*  void _startRealTimeListeners() {
+  void _startRealTimeListeners() {
     final user = _auth.currentUser;
     if (user == null) {
       _errorMessage = 'User not authenticated';
@@ -67,7 +72,7 @@ class VendorController with ChangeNotifier {
     }
 
     // Vendor Data Listener
-    _vendorDataSubscription = _database.child('vendors/${user.uid}').onValue.listen(
+    _vendorDataSubscription = _database.child('user/vendor/${user.uid}').onValue.listen(
           (event) {
         if (event.snapshot.exists) {
           _vendorData = Map<String, dynamic>.from(event.snapshot.value as Map);
@@ -84,24 +89,50 @@ class VendorController with ChangeNotifier {
     );
 
     // Orders Listener
-    _ordersSubscription = _database.child('vendors/${user.uid}/orders').onValue.listen(
+    _ordersSubscription = _database.child('orders').orderByChild('vendorId').equalTo(user.uid).onValue.listen(
           (event) {
+        print('Received orders data at path: orders');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _orders = data.entries.map((e) => Order.fromMap(Map<String, dynamic>.from(e.value as Map), id: e.key as String)).toList();
-            notifyListeners();
+            _orders = data.entries.map((e) => Order.fromMap(Map<String, dynamic>.from(e.value), id: e.key as String)).toList();
+            _errorMessage = null;
           } else {
             _orders = [];
-            notifyListeners();
           }
         } else {
           _orders = [];
-          notifyListeners();
+          _errorMessage = 'No orders found for this vendor';
         }
+        notifyListeners();
       },
       onError: (error) {
+        print('Error fetching orders: $error');
         _errorMessage = 'Failed to fetch orders: $error';
+        notifyListeners();
+      },
+    );
+
+    // Materials Listener (from centralized materials node)
+    _materialsSubscription = _database.child('materials').orderByChild('vendorId').equalTo(user.uid).onValue.listen(
+          (event) {
+        print('Received materials data at path: materials for vendor ${user.uid}');
+        if (event.snapshot.exists) {
+          final data = event.snapshot.value as Map<dynamic, dynamic>?;
+          if (data != null) {
+            _materials = data.entries.map((e) => Map<String, dynamic>.from(e.value)..['materialId'] = e.key).toList();
+          } else {
+            _materials = [];
+          }
+        } else {
+          _materials = [];
+          print('No materials found for this vendor');
+        }
+        notifyListeners();
+      },
+      onError: (error) {
+        print('Error fetching materials: $error');
+        _errorMessage = 'Failed to fetch materials: $error';
         notifyListeners();
       },
     );
@@ -117,16 +148,14 @@ class VendorController with ChangeNotifier {
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _messages = data.entries.map((e) => Message.fromMap(Map<String, dynamic>.from(e.value as Map), id: e.key as String)).toList();
-            notifyListeners();
+            _messages = data.entries.map((e) => bbMessage.Message.fromMap(Map<String, dynamic>.from(e.value), id: e.key as String)).toList();
           } else {
             _messages = [];
-            notifyListeners();
           }
         } else {
           _messages = [];
-          notifyListeners();
         }
+        notifyListeners();
       },
       onError: (error) {
         _errorMessage = 'Failed to fetch messages: $error';
@@ -140,16 +169,14 @@ class VendorController with ChangeNotifier {
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _invoices = data.entries.map((e) => Map<String, dynamic>.from(e.value as Map)..['id'] = e.key).toList();
-            notifyListeners();
+            _invoices = data.entries.map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key).toList();
           } else {
             _invoices = [];
-            notifyListeners();
           }
         } else {
           _invoices = [];
-          notifyListeners();
         }
+        notifyListeners();
       },
       onError: (error) {
         _errorMessage = 'Failed to fetch invoices: $error';
@@ -163,16 +190,14 @@ class VendorController with ChangeNotifier {
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _notifications = data.entries.map((e) => Map<String, dynamic>.from(e.value as Map)..['id'] = e.key).toList();
-            notifyListeners();
+            _notifications = data.entries.map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key).toList();
           } else {
             _notifications = [];
-            notifyListeners();
           }
         } else {
           _notifications = [];
-          notifyListeners();
         }
+        notifyListeners();
       },
       onError: (error) {
         _errorMessage = 'Failed to fetch notifications: $error';
@@ -186,49 +211,17 @@ class VendorController with ChangeNotifier {
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _tasks = data.entries.map((e) => Map<String, dynamic>.from(e.value as Map)..['id'] = e.key).toList();
-            notifyListeners();
+            _tasks = data.entries.map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key).toList();
           } else {
             _tasks = [];
-            notifyListeners();
           }
         } else {
           _tasks = [];
-          notifyListeners();
         }
+        notifyListeners();
       },
       onError: (error) {
         _errorMessage = 'Failed to fetch tasks: $error';
-        notifyListeners();
-      },
-    );
-  }*/
-  // Example snippet for VendorController
-  void _startRealTimeListeners() {
-    final user = _auth.currentUser;
-    if (user == null) {
-      _errorMessage = 'User not authenticated';
-      notifyListeners();
-      return;
-    }
-    _ordersSubscription = _database.child('user/vendor/${user.uid}/orders').onValue.listen(
-          (event) {
-        if (event.snapshot.exists) {
-          final data = event.snapshot.value as Map<dynamic, dynamic>?;
-          if (data != null) {
-            _orders = data.entries.map((e) => Order.fromMap(Map<String, dynamic>.from(e.value as Map), id: e.key as String)).toList();
-            _errorMessage = null;
-          } else {
-            _orders = [];
-          }
-        } else {
-          _orders = [];
-          _errorMessage = 'No orders found for this vendor';
-        }
-        notifyListeners();
-      },
-      onError: (error) {
-        _errorMessage = 'Failed to fetch orders: $error';
         notifyListeners();
       },
     );
@@ -241,12 +234,14 @@ class VendorController with ChangeNotifier {
     _invoicesSubscription?.cancel();
     _notificationsSubscription?.cancel();
     _tasksSubscription?.cancel();
+    _materialsSubscription?.cancel();
     _orders.clear();
     _messages.clear();
     _vendorData.clear();
     _invoices.clear();
     _notifications.clear();
     _tasks.clear();
+    _materials.clear();
     notifyListeners();
   }
 
@@ -254,7 +249,7 @@ class VendorController with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      await _database.child('vendors/${_auth.currentUser!.uid}/orders/$orderId/status').set(status);
+      await _database.child('orders/$orderId/status').set(status);
     } catch (e) {
       _errorMessage = 'Failed to update order status: $e';
     } finally {
@@ -263,11 +258,11 @@ class VendorController with ChangeNotifier {
     }
   }
 
-  Future<void> updateProduct(String productId, Map<String, dynamic> data) async {
+  Future<void> updateProduct(String materialId, Map<String, dynamic> data) async {
     _isLoading = true;
     notifyListeners();
     try {
-      await _database.child('vendors/${_auth.currentUser!.uid}/products/$productId').update(data);
+      await _database.child('materials/$materialId').update(data);
     } catch (e) {
       _errorMessage = 'Failed to update product: $e';
     } finally {
@@ -280,9 +275,49 @@ class VendorController with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      await _database.child('vendors/${_auth.currentUser!.uid}/products').push().set(product);
+      final materialId = _database.child('materials').push().key;
+      if (materialId != null) {
+        await _database.child('materials/$materialId').set({
+          'vendorId': _auth.currentUser!.uid,
+          ...product,
+        });
+      }
     } catch (e) {
       _errorMessage = 'Failed to add product: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> generateInvoice(String orderId, double amount) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final invoiceId = _database.child('invoices/${_auth.currentUser!.uid}').push().key;
+      if (invoiceId != null) {
+        await _database.child('invoices/${_auth.currentUser!.uid}/$invoiceId').set({
+          'orderId': orderId,
+          'amount': amount,
+          'status': 'Pending',
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+      }
+    } catch (e) {
+      _errorMessage = 'Failed to generate invoice: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> confirmPayment(String invoiceId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _database.child('invoices/${_auth.currentUser!.uid}/$invoiceId/status').set('Paid');
+    } catch (e) {
+      _errorMessage = 'Failed to confirm payment: $e';
     } finally {
       _isLoading = false;
       notifyListeners();

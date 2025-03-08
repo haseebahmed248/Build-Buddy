@@ -33,22 +33,47 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Product Name')),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Product Name'),
+              ),
               const SizedBox(height: 16),
-              TextField(controller: priceController, decoration: const InputDecoration(labelText: 'Price')),
+              TextField(
+                controller: priceController,
+                decoration: const InputDecoration(labelText: 'Price'),
+                keyboardType: TextInputType.number,
+              ),
             ],
           ),
         ),
         actions: [
-          TextButton(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
+          ),
           TextButton(
             child: const Text('Save'),
             onPressed: () async {
-              await controller.updateProduct(productId, {
-                'name': nameController.text,
-                'price': double.parse(priceController.text),
-              });
-              Navigator.pop(context);
+              if (nameController.text.isEmpty || priceController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+                return;
+              }
+              try {
+                await controller.updateProduct(productId, {
+                  'name': nameController.text,
+                  'price': double.parse(priceController.text),
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Product updated successfully')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error updating product: $e')),
+                );
+              }
             },
           ),
         ],
@@ -69,26 +94,54 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Product Name')),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Product Name'),
+              ),
               const SizedBox(height: 16),
-              TextField(controller: priceController, decoration: const InputDecoration(labelText: 'Price')),
+              TextField(
+                controller: priceController,
+                decoration: const InputDecoration(labelText: 'Price'),
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 16),
-              TextField(controller: statusController, decoration: const InputDecoration(labelText: 'Status')),
+              TextField(
+                controller: statusController,
+                decoration: const InputDecoration(labelText: 'Status'),
+              ),
             ],
           ),
         ),
         actions: [
-          TextButton(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
+          ),
           TextButton(
             child: const Text('Add'),
             onPressed: () async {
-              await controller.addProduct({
-                'name': nameController.text,
-                'price': double.parse(priceController.text),
-                'status': statusController.text,
-                'date': DateTime.now().toIso8601String(),
-              });
-              Navigator.pop(context);
+              if (nameController.text.isEmpty || priceController.text.isEmpty || statusController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+                return;
+              }
+              try {
+                await controller.addProduct({
+                  'name': nameController.text,
+                  'price': double.parse(priceController.text),
+                  'status': statusController.text,
+                  'date': DateTime.now().toIso8601String(),
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Product added successfully')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error adding product: $e')),
+                );
+              }
             },
           ),
         ],
@@ -103,7 +156,11 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
         preferredSize: const Size.fromHeight(120),
         child: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E3799), Color(0xFF4834DF)]),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1E3799), Color(0xFF4834DF)],
+            ),
             boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 2))],
           ),
           child: SafeArea(
@@ -114,7 +171,10 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Row(
                     children: [
-                      IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22), onPressed: () => Navigator.pop(context)),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                       Expanded(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -123,20 +183,32 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(color: Colors.white.withAlpha(60), borderRadius: BorderRadius.circular(12)),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(60),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   child: const Icon(Icons.construction, color: Colors.white, size: 28),
                                 ),
                                 const SizedBox(width: 12),
                                 const Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Manage Products', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                                    Text('Track and manage your inventory', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                                    Text(
+                                      'Manage Products',
+                                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      'Track and manage your inventory',
+                                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                                    ),
                                   ],
                                 ),
                               ],
                             ),
-                            IconButton(icon: const Icon(Icons.filter_list, color: Colors.white), onPressed: () {}),
+                            IconButton(
+                              icon: const Icon(Icons.filter_list, color: Colors.white),
+                              onPressed: () {},
+                            ),
                           ],
                         ),
                       ),
@@ -156,15 +228,16 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
           Consumer<VendorController>(
             builder: (context, controller, child) {
               if (controller.isLoading) return const Center(child: CircularProgressIndicator());
-              final products = controller.vendorData['products'] as Map<dynamic, dynamic>? ?? {};
+              if (controller.errorMessage != null) return Center(child: Text('Error: ${controller.errorMessage}'));
+              final products = controller.materials;
               return Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: ListView.builder(
                   physics: const BouncingScrollPhysics(),
                   itemCount: products.length,
                   itemBuilder: (context, index) {
-                    final productId = products.keys.elementAt(index);
-                    final product = Map<String, dynamic>.from(products[productId]);
+                    final productId = products[index]['materialId'] as String;
+                    final product = products[index];
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       margin: const EdgeInsets.only(bottom: 16),
@@ -195,7 +268,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                     const SizedBox(height: 4),
                                     Text('Price: \$${product['price']}', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                                     const SizedBox(height: 4),
-                                    Text(product['date'], style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                                    Text(product['date'] ?? '', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
                                   ],
                                 ),
                               ),
@@ -237,8 +310,6 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     );
   }
 }
-
-
 
 
 
