@@ -25,7 +25,7 @@ class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProv
     _animationController = AnimationController(duration: const Duration(milliseconds: 1000), vsync: this);
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
     _animationController.forward();
-    print('VendorDashboard init: User Role: ${_authController.currentUser.value?.role}, UID: ${_authController.currentUser.value?.uid}');
+    print('VendorDashboard init: User Role: ${_authController.currentUser.value?.role}, UID: ${_authController.currentUser.value?.uid} at ${DateTime.now()}');
   }
 
   @override
@@ -72,8 +72,22 @@ class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProv
         opacity: _fadeAnimation,
         child: Consumer<VendorController>(
           builder: (context, controller, child) {
+            print('VendorDashboard build at ${DateTime.now()}: isLoading=${controller.isLoading}, errorMessage=${controller.errorMessage}, materialsLength=${controller.materials.length}, notificationsLength=${controller.notifications.length}, ordersLength=${controller.orders.length}');
             if (controller.isLoading) return const Center(child: CircularProgressIndicator());
-            if (controller.errorMessage != null) return Center(child: Text('Error: ${controller.errorMessage}'));
+            if (controller.errorMessage != null) return Center(child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Error: ${controller.errorMessage}', style: const TextStyle(color: Colors.red)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () async {
+                    print('Retry button pressed on VendorDashboard at ${DateTime.now()}');
+                    await controller.refreshData();
+                  },
+                  child: const Text('Retry'),
+                ),
+              ],
+            ));
             return _buildBody(controller);
           },
         ),
@@ -125,7 +139,7 @@ class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProv
 
   Widget _buildBody(VendorController controller) {
     return RefreshIndicator(
-      onRefresh: () async => await controller.refreshData(), // Changed to refreshData
+      onRefresh: () async => await controller.refreshData(),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Padding(
@@ -349,8 +363,6 @@ class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProv
     );
   }
 }
-
-
 
 
 

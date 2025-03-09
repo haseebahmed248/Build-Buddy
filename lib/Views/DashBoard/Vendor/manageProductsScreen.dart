@@ -153,8 +153,9 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120),
+        preferredSize: const Size.fromHeight(120.0), // Explicit height
         child: Container(
+          height: 120.0, // Ensure container has a fixed height
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -164,71 +165,60 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
             boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 2))],
           ),
           child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Row(
                     children: [
                       IconButton(
                         icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
                         onPressed: () => Navigator.pop(context),
                       ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withAlpha(60),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.construction, color: Colors.white, size: 28),
-                                ),
-                                const SizedBox(width: 12),
-                                const Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Manage Products',
-                                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                                    ),
-                                    Text(
-                                      'Track and manage your inventory',
-                                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.refresh, color: Colors.white),
-                                  onPressed: () async {
-                                    await context.read<VendorController>().refreshData();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Data refreshed')),
-                                    );
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.filter_list, color: Colors.white),
-                                  onPressed: () {},
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Text(
+                            'Manage Products',
+                            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Track and manage your inventory',
+                            style: TextStyle(color: Colors.white70, fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-              ],
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: Colors.white),
+                        onPressed: () async {
+                          print('Refresh button pressed at ${DateTime.now()}');
+                          await context.read<VendorController>().refreshData();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Data refreshed')),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.filter_list, color: Colors.white),
+                        onPressed: () {
+                          print('Filter button pressed at ${DateTime.now()}');
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -236,35 +226,41 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
       backgroundColor: const Color(0xFFF5F6FA),
       body: Stack(
         children: [
-          Positioned(top: -100, right: -50, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: Color.fromRGBO(72, 52, 223, 0.1)))),
-          Positioned(bottom: -80, left: -60, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: Color.fromRGBO(30, 55, 153, 0.1)))),
+          Positioned(top: -100, right: -50, child: Container(width: 200, height: 200, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color.fromRGBO(72, 52, 223, 0.1)))),
+          Positioned(bottom: -80, left: -60, child: Container(width: 200, height: 200, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color.fromRGBO(30, 55, 153, 0.1)))),
           Consumer<VendorController>(
             builder: (context, controller, child) {
-              if (controller.isLoading) return const Center(child: CircularProgressIndicator());
+              print('ManageProductsScreen build at ${DateTime.now()}: materials length=${controller.materials.length}, error=${controller.errorMessage}, isLoading=${controller.isLoading}');
+              if (controller.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
               if (controller.errorMessage != null) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Error: ${controller.errorMessage}', style: TextStyle(color: Colors.red)),
+                      Text('Error: ${controller.errorMessage}', style: const TextStyle(color: Colors.red)),
+                      const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () async {
+                          print('Retry button pressed at ${DateTime.now()}');
                           await controller.refreshData();
                         },
-                        child: Text('Retry'),
+                        child: const Text('Retry'),
                       ),
                     ],
                   ),
                 );
               }
               final products = controller.materials;
+              print('Rendering products: $products at ${DateTime.now()}');
               return Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
                     Expanded(
                       child: products.isEmpty
-                          ? Center(child: Text('No products found. Add a product to get started!'))
+                          ? const Center(child: Text('No products found. Add a product to get started!'))
                           : ListView.builder(
                         physics: const BouncingScrollPhysics(),
                         itemCount: products.length,
@@ -278,7 +274,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(20),
-                                boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10, offset: const Offset(0, 4))],
+                                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16.0),
@@ -293,15 +289,25 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                       child: Icon(Icons.work, color: _getStatusColor(product['status']), size: 24),
                                     ),
                                     const SizedBox(width: 16),
-                                    Expanded(
+                                    Expanded( // Use Expanded to prevent overflow
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(product['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E3799))),
+                                          Text(
+                                            product['name'] ?? 'Unnamed Product',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E3799)),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                           const SizedBox(height: 4),
-                                          Text('Price: \$${product['price']}', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                                          Text(
+                                            'Price: \$${product['price']?.toString() ?? '0'}',
+                                            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                                          ),
                                           const SizedBox(height: 4),
-                                          Text(product['date'] ?? '', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                                          Text(
+                                            product['date'] ?? '',
+                                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -314,7 +320,11 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                             color: Color.fromRGBO(_getStatusColor(product['status']).red, _getStatusColor(product['status']).green, _getStatusColor(product['status']).blue, 0.1),
                                             borderRadius: BorderRadius.circular(20),
                                           ),
-                                          child: Text(product['status'], style: TextStyle(color: _getStatusColor(product['status']), fontWeight: FontWeight.bold, fontSize: 12)),
+                                          child: Text(
+                                            product['status'] ?? 'Unknown',
+                                            style: TextStyle(color: _getStatusColor(product['status']), fontWeight: FontWeight.bold, fontSize: 12),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                         const SizedBox(height: 8),
                                         IconButton(
@@ -339,14 +349,16 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddProductDialog(context.read<VendorController>()),
+        onPressed: () {
+          print('Add product button pressed at ${DateTime.now()}');
+          _showAddProductDialog(context.read<VendorController>());
+        },
         child: const Icon(Icons.add),
         backgroundColor: const Color(0xFF4834DF),
       ),
     );
   }
 }
-
 
 
 

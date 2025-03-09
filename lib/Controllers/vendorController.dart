@@ -1,13 +1,11 @@
 import 'dart:async';
+import 'package:buildbuddy/Models/userModels.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-
 import 'package:buildbuddy/Controllers/authControllers.dart';
 import 'package:buildbuddy/Models/orderModel.dart';
 import 'package:buildbuddy/Models/messageModel.dart' as bbMessage;
-import 'package:flutter_chat_ui/flutter_chat_ui.dart';
-import '../Models/userModels.dart';
 
 class VendorController with ChangeNotifier {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
@@ -44,30 +42,39 @@ class VendorController with ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _materialsSubscription;
 
   VendorController(this._authController) {
+    print('VendorController initialized at ${DateTime.now()}');
     _checkVendorStatus();
     _authController.addListener(_onAuthStateChanged);
   }
 
-  void _onAuthStateChanged() => _checkVendorStatus();
+  void _onAuthStateChanged() {
+    print('Auth state changed at ${DateTime.now()}, checking vendor status');
+    _checkVendorStatus();
+  }
 
   void _checkVendorStatus() async {
     final authUser = _auth.currentUser;
     final user = _authController.currentUser.value;
-    print('Checking vendor status: authUser=${authUser?.email}, authUID=${authUser?.uid}, user=${user?.email}, userUID=${user?.uid}, Role: ${user?.role}, Authenticated: ${user != null}');
+    print(
+        'Checking vendor status at ${DateTime.now()}: authUser=${authUser?.email}, authUID=${authUser?.uid}, user=${user?.email}, userUID=${user?.uid}, Role: ${user?.role}, Authenticated: ${user != null}');
     if (user == null || authUser == null) {
       _errorMessage = 'User not authenticated. Please log in again.';
+      print('Authentication error at ${DateTime.now()}: $_errorMessage');
       _stopRealTimeListeners();
       notifyListeners();
       return;
     }
     if (user.uid != authUser.uid) {
-      _errorMessage = 'UID mismatch between auth and controller. authUID=${authUser.uid}, userUID=${user.uid}';
+      _errorMessage =
+      'UID mismatch between auth and controller. authUID=${authUser.uid}, userUID=${user.uid}';
+      print('Authentication error at ${DateTime.now()}: $_errorMessage');
       _stopRealTimeListeners();
       notifyListeners();
       return;
     }
     if (user.role != UserRole.vendor) {
       _errorMessage = 'User is not a vendor. Role: ${user.role}';
+      print('Role error at ${DateTime.now()}: $_errorMessage');
       _stopRealTimeListeners();
       notifyListeners();
       return;
@@ -79,116 +86,116 @@ class VendorController with ChangeNotifier {
     final user = _auth.currentUser;
     if (user == null) {
       _errorMessage = 'User not authenticated';
-      print('Authentication failed: User is null');
+      print('Authentication failed at ${DateTime.now()}: User is null');
       notifyListeners();
       return;
     }
-    print('Starting real-time listeners for UID: ${user.uid}');
+    print('Starting real-time listeners for UID: ${user.uid} at ${DateTime.now()}');
 
     // Vendor Data Listener
     _vendorDataSubscription?.cancel();
-    _vendorDataSubscription = _database.child('user/vendor/${user.uid}').onValue.listen(
+    _vendorDataSubscription = _database
+        .child('user/vendor/${user.uid}')
+        .onValue
+        .listen(
           (event) {
-        print('Vendor data event for UID: ${user.uid}, exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print(
+            'Vendor data event for UID: ${user.uid} at ${DateTime.now()}, exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
         if (event.snapshot.exists) {
           _vendorData = Map<String, dynamic>.from(event.snapshot.value as Map);
         } else {
           _vendorData = {};
-          print('No vendor data found for UID: ${user.uid}. Please ensure vendor profile is set up.');
+          print(
+              'No vendor data found for UID: ${user.uid} at ${DateTime.now()}. Please ensure vendor profile is set up.');
         }
         notifyListeners();
       },
       onError: (error) {
-        print('Error fetching vendor data: $error, UID: ${user.uid}, Path: user/vendor/${user.uid}');
+        print(
+            'Error fetching vendor data at ${DateTime.now()}: $error, UID: ${user.uid}, Path: user/vendor/${user.uid}, Stack: ${StackTrace.current}');
       },
     );
 
-    // Orders Listener
+    // Orders Listener (Temporary workaround: silent failure)
     _ordersSubscription?.cancel();
-    _ordersSubscription = _database.child('orders').orderByChild('vendorId').equalTo(user.uid).onValue.listen(
+    _ordersSubscription = _database
+        .child('orders')
+        .orderByChild('vendorId')
+        .equalTo(user.uid)
+        .onValue
+        .listen(
           (event) {
-        print('Received orders data at path: orders for vendor ${user.uid}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print(
+            'Orders data event for UID: ${user.uid} at ${DateTime.now()}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _orders = data.entries.map((e) => Order.fromMap(Map<String, dynamic>.from(e.value), id: e.key as String)).toList();
+            _orders = data.entries
+                .map((e) => Order.fromMap(
+                Map<String, dynamic>.from(e.value), id: e.key as String))
+                .toList();
+            print('Orders parsed successfully: ${_orders.map((o) => o.id).toList()}');
           } else {
             _orders = [];
+            print('No valid data in orders snapshot at ${DateTime.now()}');
           }
         } else {
           _orders = [];
-          print('No orders found for this vendor');
+          print('No orders found for vendorId: ${user.uid} at ${DateTime.now()}');
         }
         notifyListeners();
       },
       onError: (error) {
-        print('Error fetching orders: $error');
+        print('Error fetching orders at ${DateTime.now()}: $error, Path: orders, UID: ${user.uid}, Stack: ${StackTrace.current}');
+        _orders = []; // Silent failure to prevent UI break
+        notifyListeners();
       },
     );
 
-    // Materials Listener (Temporary Debugging - Fetch all materials)
     // Materials Listener
     _materialsSubscription?.cancel();
-    _materialsSubscription = _database.child('materials').orderByChild('vendorId').equalTo(user.uid).onValue.listen(
+    _materialsSubscription = _database
+        .child('materials')
+        .orderByChild('vendorId')
+        .equalTo(user.uid)
+        .onValue
+        .listen(
           (event) {
-        print('Received materials data at path: materials for vendor ${user.uid}, snapshot exists: ${event.snapshot.exists}, snapshot value: ${event.snapshot.value}');
+        print('=== Materials Listener Fired at ${DateTime.now()} ===');
+        print('User UID: ${user.uid}');
+        print('Snapshot exists: ${event.snapshot.exists}');
+        print('Snapshot value: ${event.snapshot.value}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
             _materials = data.entries.map((e) {
-              final material = Map<String, dynamic>.from(e.value)..['materialId'] = e.key;
-              print('Parsed material: $material');
+              final material = Map<String, dynamic>.from(e.value)
+                ..['materialId'] = e.key;
+              print('Parsed material at ${DateTime.now()}: $material');
               return material;
             }).toList();
-            print('Materials list updated with ${_materials.length} items');
+            print(
+                'Materials list updated with ${_materials.length} items at ${DateTime.now()}: $_materials');
           } else {
             _materials = [];
-            print('No valid data found in materials snapshot');
+            print('No valid data found in materials snapshot at ${DateTime.now()}');
           }
         } else {
           _materials = [];
-          print('No materials found for this vendor with vendorId: ${user.uid}');
+          print('No materials found for vendorId: ${user.uid} at ${DateTime.now()}');
         }
-        notifyListeners(); // Ensure UI updates
+        _errorMessage = null; // Clear error on successful fetch
+        print('Notifying listeners with ${_materials.length} materials at ${DateTime.now()}');
+        notifyListeners();
       },
       onError: (error) {
-        print('Error fetching materials: $error, UID: ${user.uid}, Path: materials');
+        print(
+            'Error fetching materials at ${DateTime.now()}: $error, Path: materials, UID: ${user.uid}, Stack: ${StackTrace.current}');
+        _errorMessage = 'Failed to fetch materials: $error';
         _materials = [];
         notifyListeners();
       },
     );
-  /*  _materialsSubscription?.cancel();
-    _materialsSubscription = _database.child('materials').onValue.listen(
-          (event) {
-        print('Received materials data at path: materials for vendor ${user.uid}, snapshot exists: ${event.snapshot.exists}, snapshot value: ${event.snapshot.value}');
-        if (event.snapshot.exists) {
-          final data = event.snapshot.value as Map<dynamic, dynamic>?;
-          if (data != null) {
-            _materials = data.entries.map((e) {
-              final material = Map<String, dynamic>.from(e.value)..['materialId'] = e.key;
-              print('Parsed material: $material');
-              return material;
-            }).toList();
-            print('Materials list updated with ${_materials.length} items');
-            // Filter materials with matching vendorId
-            _materials = _materials.where((material) => material['vendorId'] == user.uid).toList();
-            print('Filtered materials for vendorId ${user.uid}: ${_materials.length} items');
-          } else {
-            _materials = [];
-            print('No valid data found in materials snapshot');
-          }
-        } else {
-          _materials = [];
-          print('No materials found in the database');
-        }
-        notifyListeners(); // Ensure UI updates
-      },
-      onError: (error) {
-        print('Error fetching materials: $error, UID: ${user.uid}, Path: materials');
-        _materials = [];
-        notifyListeners();
-      },
-    );*/
 
     // Messages Listener
     _messagesSubscription?.cancel();
@@ -199,37 +206,45 @@ class VendorController with ChangeNotifier {
         .onValue
         .listen(
           (event) {
-        print('Messages data received for user ${user.uid} at path: messages/contractor_vendor, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print(
+            'Messages data event for UID: ${user.uid} at ${DateTime.now()}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
             _messages = data.entries
-                .map((e) => bbMessage.Message.fromMap(Map<String, dynamic>.from(e.value), id: e.key as String))
+                .map((e) => bbMessage.Message.fromMap(
+                Map<String, dynamic>.from(e.value), id: e.key as String))
                 .toList();
           } else {
             _messages = [];
-            print('No valid messages data found for receiverId: ${user.uid}');
+            print('No valid messages data found for receiverId: ${user.uid} at ${DateTime.now()}');
           }
         } else {
           _messages = [];
-          print('No messages found for receiverId: ${user.uid}');
+          print('No messages found for receiverId: ${user.uid} at ${DateTime.now()}');
         }
         notifyListeners();
       },
       onError: (error) {
-        print('Error fetching messages: $error');
+        print('Error fetching messages at ${DateTime.now()}: $error, Stack: ${StackTrace.current}');
       },
     );
 
     // Invoices Listener
     _invoicesSubscription?.cancel();
-    _invoicesSubscription = _database.child('invoices/${user.uid}').onValue.listen(
+    _invoicesSubscription = _database
+        .child('invoices/${user.uid}')
+        .onValue
+        .listen(
           (event) {
-        print('Received invoices data for UID: ${user.uid}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print(
+            'Invoices data event for UID: ${user.uid} at ${DateTime.now()}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _invoices = data.entries.map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key).toList();
+            _invoices = data.entries
+                .map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key)
+                .toList();
           } else {
             _invoices = [];
           }
@@ -239,41 +254,59 @@ class VendorController with ChangeNotifier {
         notifyListeners();
       },
       onError: (error) {
-        print('Error fetching invoices: $error');
+        print('Error fetching invoices at ${DateTime.now()}: $error, Stack: ${StackTrace.current}');
       },
     );
 
     // Notifications Listener
     _notificationsSubscription?.cancel();
-    _notificationsSubscription = _database.child('notifications/${user.uid}').onValue.listen(
+    _notificationsSubscription = _database
+        .child('notifications/${user.uid}')
+        .onValue
+        .listen(
           (event) {
-        print('Received notifications data for UID: ${user.uid}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print(
+            'Notifications data event for UID: ${user.uid} at ${DateTime.now()}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _notifications = data.entries.map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key).toList();
+            _notifications = data.entries
+                .map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key)
+                .toList();
+            print('Notifications parsed: ${_notifications.map((n) => n['id']).toList()}');
           } else {
             _notifications = [];
+            print('No valid data in notifications snapshot at ${DateTime.now()}');
           }
         } else {
           _notifications = [];
+          print('No notifications found for UID: ${user.uid} at ${DateTime.now()}');
         }
         notifyListeners();
       },
       onError: (error) {
-        print('Error fetching notifications: $error');
+        print('Error fetching notifications at ${DateTime.now()}: $error, Path: notifications/${user.uid}, UID: ${user.uid}, Stack: ${StackTrace.current}');
+        _errorMessage = 'Failed to fetch notifications: $error';
+        _notifications = [];
+        notifyListeners();
       },
     );
 
     // Tasks Listener
     _tasksSubscription?.cancel();
-    _tasksSubscription = _database.child('vendor_tasks/${user.uid}').onValue.listen(
+    _tasksSubscription = _database
+        .child('vendor_tasks/${user.uid}')
+        .onValue
+        .listen(
           (event) {
-        print('Received tasks data for UID: ${user.uid}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print(
+            'Tasks data event for UID: ${user.uid} at ${DateTime.now()}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _tasks = data.entries.map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key).toList();
+            _tasks = data.entries
+                .map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key)
+                .toList();
           } else {
             _tasks = [];
           }
@@ -283,12 +316,13 @@ class VendorController with ChangeNotifier {
         notifyListeners();
       },
       onError: (error) {
-        print('Error fetching tasks: $error');
+        print('Error fetching tasks at ${DateTime.now()}: $error, Stack: ${StackTrace.current}');
       },
     );
   }
 
   void _stopRealTimeListeners() {
+    print('Stopping real-time listeners at ${DateTime.now()}');
     _ordersSubscription?.cancel();
     _messagesSubscription?.cancel();
     _vendorDataSubscription?.cancel();
@@ -307,6 +341,7 @@ class VendorController with ChangeNotifier {
   }
 
   Future<void> refreshData() async {
+    print('Refreshing data at ${DateTime.now()}');
     _isLoading = true;
     notifyListeners();
     try {
@@ -314,9 +349,10 @@ class VendorController with ChangeNotifier {
       await Future.delayed(Duration(milliseconds: 100)); // Small delay to ensure listeners stop
       _startRealTimeListeners();
       _errorMessage = null;
+      print('Refresh completed successfully at ${DateTime.now()}');
     } catch (e) {
       _errorMessage = 'Failed to refresh data: $e';
-      print('Refresh data error: $_errorMessage');
+      print('Refresh data error at ${DateTime.now()}: $_errorMessage');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -329,25 +365,11 @@ class VendorController with ChangeNotifier {
     try {
       await _database.child('orders/$orderId/status').set(status);
       _errorMessage = null;
+      await refreshData(); // Refresh data after update
+      print('Order status updated successfully: $orderId at ${DateTime.now()}');
     } catch (e) {
       _errorMessage = 'Failed to update order status: $e';
-      print('Update order status error: $_errorMessage');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> updateProduct(String materialId, Map<String, dynamic> data) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      await _database.child('materials/$materialId').update(data);
-      _errorMessage = null;
-      await refreshData(); // Refresh data after update
-    } catch (e) {
-      _errorMessage = 'Failed to update product: $e';
-      print('Update product error: $_errorMessage');
+      print('Update order status error at ${DateTime.now()}: $_errorMessage');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -358,22 +380,60 @@ class VendorController with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final materialId = _database.child('materials').push().key;
-      if (materialId != null) {
-        final currentUserId = _auth.currentUser!.uid;
-        print('Adding product with vendorId: $currentUserId');
-        await _database.child('materials/$materialId').set({
-          'vendorId': currentUserId,
-          ...product,
-        });
-        _errorMessage = null;
-        await refreshData(); // Refresh data after adding
-      } else {
-        _errorMessage = 'Failed to generate material ID';
-      }
+      final user = _auth.currentUser;
+      if (user == null) throw 'User not authenticated';
+
+      final vendorId = user.uid;
+      print('Adding product with vendorId: $vendorId at ${DateTime.now()}');
+
+      final newRef = _database.child('materials').push();
+      await newRef.set({
+        ...product,
+        'vendorId': vendorId, // Ensure vendorId is included
+        'date': DateTime.now().toIso8601String(), // Add date if not provided
+      });
+      print('Product added successfully: ${product.toString()} with vendorId: $vendorId at ${DateTime.now()}');
+      _errorMessage = null;
+      await refreshData(); // Refresh data after adding
     } catch (e) {
       _errorMessage = 'Failed to add product: $e';
-      print('Add product error: $_errorMessage');
+      print('Add product error at ${DateTime.now()}: $_errorMessage');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateProduct(String materialId, Map<String, dynamic> updates) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      print('Updating product with ID: $materialId at ${DateTime.now()}');
+      await _database.child('materials/$materialId').update(updates);
+      print('Product updated successfully: $materialId at ${DateTime.now()}');
+      _errorMessage = null;
+      await refreshData(); // Refresh data after update
+    } catch (e) {
+      _errorMessage = 'Failed to update product: $e';
+      print('Update product error at ${DateTime.now()}: $_errorMessage');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteProduct(String materialId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      print('Deleting product with ID: $materialId at ${DateTime.now()}');
+      await _database.child('materials/$materialId').remove();
+      print('Product deleted successfully: $materialId at ${DateTime.now()}');
+      _errorMessage = null;
+      await refreshData(); // Refresh data after delete
+    } catch (e) {
+      _errorMessage = 'Failed to delete product: $e';
+      print('Delete product error at ${DateTime.now()}: $_errorMessage');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -392,13 +452,16 @@ class VendorController with ChangeNotifier {
           'status': 'Pending',
           'createdAt': DateTime.now().toIso8601String(),
         });
+        print('Invoice generated successfully: $invoiceId at ${DateTime.now()}');
         _errorMessage = null;
+        await refreshData(); // Refresh data after generating invoice
       } else {
         _errorMessage = 'Failed to generate invoice ID';
+        print('Error at ${DateTime.now()}: $_errorMessage');
       }
     } catch (e) {
       _errorMessage = 'Failed to generate invoice: $e';
-      print('Generate invoice error: $_errorMessage');
+      print('Generate invoice error at ${DateTime.now()}: $_errorMessage');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -409,11 +472,15 @@ class VendorController with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      await _database.child('invoices/${_auth.currentUser!.uid}/$invoiceId/status').set('Paid');
+      await _database
+          .child('invoices/${_auth.currentUser!.uid}/$invoiceId/status')
+          .set('Paid');
+      print('Payment confirmed for invoice: $invoiceId at ${DateTime.now()}');
       _errorMessage = null;
+      await refreshData(); // Refresh data after confirming payment
     } catch (e) {
       _errorMessage = 'Failed to confirm payment: $e';
-      print('Confirm payment error: $_errorMessage');
+      print('Confirm payment error at ${DateTime.now()}: $_errorMessage');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -425,10 +492,12 @@ class VendorController with ChangeNotifier {
     notifyListeners();
     try {
       await _database.child('notifications/${_auth.currentUser!.uid}').remove();
+      print('Notifications cleared successfully at ${DateTime.now()}');
       _errorMessage = null;
+      await refreshData(); // Refresh data after clearing notifications
     } catch (e) {
       _errorMessage = 'Failed to clear notifications: $e';
-      print('Clear notifications error: $_errorMessage');
+      print('Clear notifications error at ${DateTime.now()}: $_errorMessage');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -437,6 +506,7 @@ class VendorController with ChangeNotifier {
 
   @override
   void dispose() {
+    print('Disposing VendorController at ${DateTime.now()}');
     _stopRealTimeListeners();
     _authController.removeListener(_onAuthStateChanged);
     super.dispose();
