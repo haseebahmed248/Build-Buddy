@@ -91,6 +91,7 @@ class VendorController with ChangeNotifier {
       return;
     }
     print('Starting real-time listeners for UID: ${user.uid} at ${DateTime.now()}');
+    print('Current user UID: ${user.uid}');
 
     // Vendor Data Listener
     _vendorDataSubscription?.cancel();
@@ -116,32 +117,53 @@ class VendorController with ChangeNotifier {
       },
     );
 
-    // Orders Listener (Temporary workaround: silent failure)
+    // Orders Listener with improved debugging
     _ordersSubscription?.cancel();
+    print('Looking for orders with vendorId: ${user.uid}');
+
+    // First, let's check all orders to see if any exist with our vendorId
+    _database.child('orders').get().then((snapshot) {
+      print('All orders (debug): ${snapshot.value}');
+      if (snapshot.exists) {
+        final allOrders = snapshot.value as Map<dynamic, dynamic>;
+        allOrders.forEach((key, value) {
+          final order = Map<String, dynamic>.from(value);
+          print('Order $key vendorId: ${order['vendorId']}, current user uid: ${user.uid}');
+        });
+      }
+    });
+
     _ordersSubscription = _database
         .child('orders')
-        .orderByChild('vendorId')
-        .equalTo(user.uid)
         .onValue
         .listen(
           (event) {
-        print(
-            'Orders data event for UID: ${user.uid} at ${DateTime.now()}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print('All orders snapshot at ${DateTime.now()}, exists: ${event.snapshot.exists}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _orders = data.entries
-                .map((e) => Order.fromMap(
-                Map<String, dynamic>.from(e.value), id: e.key as String))
-                .toList();
-            print('Orders parsed successfully: ${_orders.map((o) => o.id).toList()}');
+            // Filter orders manually to ensure we catch any case sensitivity issues
+            final List<Order> filteredOrders = [];
+            data.forEach((key, value) {
+              final orderData = Map<String, dynamic>.from(value);
+              print('Checking order: $key, vendorId: ${orderData['vendorId']}, current user: ${user.uid}');
+
+              // Check both lowercase versions to handle any case sensitivity issues
+              if (orderData['vendorId']?.toString().toLowerCase() == user.uid.toLowerCase()) {
+                print('Order matches current vendor: $key');
+                filteredOrders.add(Order.fromMap(orderData, id: key as String));
+              }
+            });
+
+            _orders = filteredOrders;
+            print('Orders filtered for vendor - found ${_orders.length} orders: ${_orders.map((o) => o.id).toList()}');
           } else {
             _orders = [];
             print('No valid data in orders snapshot at ${DateTime.now()}');
           }
         } else {
           _orders = [];
-          print('No orders found for vendorId: ${user.uid} at ${DateTime.now()}');
+          print('No orders found in database at ${DateTime.now()}');
         }
         notifyListeners();
       },

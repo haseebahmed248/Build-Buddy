@@ -21,9 +21,21 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     }
   }
 
+  // Calculate status based on quantity
+  String _calculateStatus(int quantity) {
+    if (quantity <= 0) {
+      return 'Out of Stock';
+    } else if (quantity < 10) {
+      return 'Low Stock';
+    } else {
+      return 'In Stock';
+    }
+  }
+
   void _showEditDialog(VendorController controller, String productId, Map<String, dynamic> product) {
     final nameController = TextEditingController(text: product['name']);
     final priceController = TextEditingController(text: product['price'].toString());
+    final quantityController = TextEditingController(text: (product['quantity'] ?? 0).toString());
 
     showDialog(
       context: context,
@@ -43,6 +55,12 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                 decoration: const InputDecoration(labelText: 'Price'),
                 keyboardType: TextInputType.number,
               ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: quantityController,
+                decoration: const InputDecoration(labelText: 'Quantity'),
+                keyboardType: TextInputType.number,
+              ),
             ],
           ),
         ),
@@ -54,16 +72,19 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
           TextButton(
             child: const Text('Save'),
             onPressed: () async {
-              if (nameController.text.isEmpty || priceController.text.isEmpty) {
+              if (nameController.text.isEmpty || priceController.text.isEmpty || quantityController.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Please fill all fields')),
                 );
                 return;
               }
               try {
+                final quantity = int.parse(quantityController.text);
                 await controller.updateProduct(productId, {
                   'name': nameController.text,
                   'price': double.parse(priceController.text),
+                  'quantity': quantity,
+                  'status': _calculateStatus(quantity),
                 });
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -84,7 +105,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
   void _showAddProductDialog(VendorController controller) {
     final nameController = TextEditingController();
     final priceController = TextEditingController();
-    final statusController = TextEditingController(text: 'In Stock');
+    final quantityController = TextEditingController();
 
     showDialog(
       context: context,
@@ -106,8 +127,9 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
               ),
               const SizedBox(height: 16),
               TextField(
-                controller: statusController,
-                decoration: const InputDecoration(labelText: 'Status'),
+                controller: quantityController,
+                decoration: const InputDecoration(labelText: 'Quantity'),
+                keyboardType: TextInputType.number,
               ),
             ],
           ),
@@ -120,17 +142,19 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
           TextButton(
             child: const Text('Add'),
             onPressed: () async {
-              if (nameController.text.isEmpty || priceController.text.isEmpty || statusController.text.isEmpty) {
+              if (nameController.text.isEmpty || priceController.text.isEmpty || quantityController.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Please fill all fields')),
                 );
                 return;
               }
               try {
+                final quantity = int.parse(quantityController.text);
                 await controller.addProduct({
                   'name': nameController.text,
                   'price': double.parse(priceController.text),
-                  'status': statusController.text,
+                  'quantity': quantity,
+                  'status': _calculateStatus(quantity),
                   'date': DateTime.now().toIso8601String(),
                 });
                 Navigator.pop(context);
@@ -305,6 +329,11 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
+                                            'Quantity: ${product['quantity']?.toString() ?? '0'}',
+                                            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
                                             product['date'] ?? '',
                                             style: TextStyle(color: Colors.grey[500], fontSize: 12),
                                           ),
@@ -359,7 +388,6 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     );
   }
 }
-
 
 
 ///////////////UI///////////////////
