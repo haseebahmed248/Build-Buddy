@@ -205,9 +205,22 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                 ),
                               ],
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.filter_list, color: Colors.white),
-                              onPressed: () {},
+                            Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.refresh, color: Colors.white),
+                                  onPressed: () async {
+                                    await context.read<VendorController>().refreshData();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Data refreshed')),
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.filter_list, color: Colors.white),
+                                  onPressed: () {},
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -228,74 +241,97 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
           Consumer<VendorController>(
             builder: (context, controller, child) {
               if (controller.isLoading) return const Center(child: CircularProgressIndicator());
-              if (controller.errorMessage != null) return Center(child: Text('Error: ${controller.errorMessage}'));
+              if (controller.errorMessage != null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Error: ${controller.errorMessage}', style: TextStyle(color: Colors.red)),
+                      ElevatedButton(
+                        onPressed: () async {
+                          await controller.refreshData();
+                        },
+                        child: Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
               final products = controller.materials;
               return Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: ListView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final productId = products[index]['materialId'] as String;
-                    final product = products[index];
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10, offset: const Offset(0, 4))],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Color.fromRGBO(_getStatusColor(product['status']).red, _getStatusColor(product['status']).green, _getStatusColor(product['status']).blue, 0.1),
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                child: Icon(Icons.work, color: _getStatusColor(product['status']), size: 24),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: products.isEmpty
+                          ? Center(child: Text('No products found. Add a product to get started!'))
+                          : ListView.builder(
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: products.length,
+                        itemBuilder: (context, index) {
+                          final productId = products[index]['materialId'] as String;
+                          final product = products[index];
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 10, offset: const Offset(0, 4))],
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Row(
                                   children: [
-                                    Text(product['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E3799))),
-                                    const SizedBox(height: 4),
-                                    Text('Price: \$${product['price']}', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                                    const SizedBox(height: 4),
-                                    Text(product['date'] ?? '', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Color.fromRGBO(_getStatusColor(product['status']).red, _getStatusColor(product['status']).green, _getStatusColor(product['status']).blue, 0.1),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: Icon(Icons.work, color: _getStatusColor(product['status']), size: 24),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(product['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E3799))),
+                                          const SizedBox(height: 4),
+                                          Text('Price: \$${product['price']}', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                                          const SizedBox(height: 4),
+                                          Text(product['date'] ?? '', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Color.fromRGBO(_getStatusColor(product['status']).red, _getStatusColor(product['status']).green, _getStatusColor(product['status']).blue, 0.1),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(product['status'], style: TextStyle(color: _getStatusColor(product['status']), fontWeight: FontWeight.bold, fontSize: 12)),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        IconButton(
+                                          icon: const Icon(Icons.edit, color: Color(0xFF4834DF)),
+                                          onPressed: () => _showEditDialog(controller, productId, product),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: Color.fromRGBO(_getStatusColor(product['status']).red, _getStatusColor(product['status']).green, _getStatusColor(product['status']).blue, 0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(product['status'], style: TextStyle(color: _getStatusColor(product['status']), fontWeight: FontWeight.bold, fontSize: 12)),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, color: Color(0xFF4834DF)),
-                                    onPressed: () => _showEditDialog(controller, productId, product),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               );
             },
@@ -310,8 +346,6 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     );
   }
 }
-
-
 
 
 

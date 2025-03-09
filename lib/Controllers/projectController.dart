@@ -1,4 +1,3 @@
-// lib/Controllers/projectController.dart
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -78,6 +77,12 @@ class ProjectController extends ChangeNotifier {
       query = _database.child('projects').orderByChild('assignedContractorId').equalTo(user.uid);
     } else if (_userType == 'architect') {
       query = _database.child('projects').orderByChild('assignedArchitectId').equalTo(user.uid);
+    } else if (_userType == 'vendor') {
+      _errorMessage = 'Vendors do not have direct access to projects.';
+      print(_errorMessage);
+      _projects.clear();
+      notifyListeners();
+      return;
     } else {
       _errorMessage = 'Invalid userType: $_userType';
       print(_errorMessage);

@@ -81,37 +81,48 @@ class RoleBasedMiddleware extends GetMiddleware {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || userData == null) {
+      print('User not authenticated: redirecting to /stakeholder');
       Get.snackbar('Unauthorized', 'Please sign in as a ${requiredRole.name}');
       return const RouteSettings(name: '/stakeholder');
     }
 
     switch (requiredRole) {
       case UserRole.admin:
+        print('Checking role for admin: userData.role=${userData.role}');
         if (userData.role != UserRole.admin) {
+          print('Unauthorized admin access: redirecting to /stakeholder');
           Get.snackbar('Unauthorized', 'Only admins can access this page');
           return const RouteSettings(name: '/stakeholder');
         }
         break;
       case UserRole.homeowner:
+        print('Checking role for homeowner: userData.role=${userData.role}');
         if (userData.role != UserRole.homeowner) {
+          print('Unauthorized homeowner access: redirecting to /stakeholder');
           Get.snackbar('Unauthorized', 'Only homeowners can access this page');
           return const RouteSettings(name: '/stakeholder');
         }
         break;
       case UserRole.contractor:
+        print('Checking role for contractor: userData.role=${userData.role}');
         if (userData.role != UserRole.contractor) {
+          print('Unauthorized contractor access: redirecting to /stakeholder');
           Get.snackbar('Unauthorized', 'Only contractors can access this page');
           return const RouteSettings(name: '/stakeholder');
         }
         break;
       case UserRole.architect:
+        print('Checking role for architect: userData.role=${userData.role}');
         if (userData.role != UserRole.architect) {
+          print('Unauthorized architect access: redirecting to /stakeholder');
           Get.snackbar('Unauthorized', 'Only architects can access this page');
           return const RouteSettings(name: '/stakeholder');
         }
         break;
       case UserRole.vendor:
+        print('Checking role for vendor: userData.role=${userData.role}');
         if (userData.role != UserRole.vendor) {
+          print('Unauthorized vendor access: redirecting to /stakeholder');
           Get.snackbar('Unauthorized', 'Only vendors can access this page');
           return const RouteSettings(name: '/stakeholder');
         }
@@ -288,7 +299,7 @@ class AppRoutes {
     ),
     GetPage(
       name: '/vendor-orders',
-      page: () => vendor.MaterialOrdersScreen(), // Use the vendor version
+      page: () => vendor.MaterialOrdersScreen(),
       middlewares: [
         RoleBasedMiddleware(UserRole.vendor),
       ],
@@ -296,22 +307,19 @@ class AppRoutes {
     GetPage(
       name: '/contractor-messages',
       page: () {
-        // Redirect to ManageProjectsScreen for project selection
         return const ManageProjectsScreen(userType: 'contractor');
       },
       middlewares: [
         RoleBasedMiddleware(UserRole.contractor),
       ],
     ),
-//////////////
     GetPage(
       name: '/material-orders',
-      page: () => const contractor.MaterialOrdersScreen(), // Use contractor version
+      page: () => const contractor.MaterialOrdersScreen(),
       middlewares: [
         RoleBasedMiddleware(UserRole.contractor),
       ],
     ),
-    ///////////////
     GetPage(
       name: '/contractor-payments',
       page: () => const PaymentsScreen(),
@@ -336,8 +344,6 @@ class AppRoutes {
         RoleBasedMiddleware(UserRole.architect),
       ],
     ),
-
-
     GetPage(
       name: '/architect-chat',
       page: () => ChatScreenImport.ChatScreen(projectId: '', projectTitle: ''),
@@ -376,13 +382,6 @@ class AppRoutes {
         RoleBasedMiddleware(UserRole.vendor),
       ],
     ),
-    /*GetPage(
-      name: '/vendor-orders',
-      page: () => MaterialOrdersScreen(), // Use MaterialOrdersScreen
-      middlewares: [
-        RoleBasedMiddleware(UserRole.vendor),
-      ],
-    ),*/
     GetPage(
       name: '/vendor-payments',
       page: () => VendorInvoicesScreen(),
@@ -434,7 +433,6 @@ class AppRoutes {
     ),
   ];
 }
-
 
 
 

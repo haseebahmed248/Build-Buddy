@@ -25,6 +25,7 @@ class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProv
     _animationController = AnimationController(duration: const Duration(milliseconds: 1000), vsync: this);
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
     _animationController.forward();
+    print('VendorDashboard init: User Role: ${_authController.currentUser.value?.role}, UID: ${_authController.currentUser.value?.uid}');
   }
 
   @override
@@ -124,7 +125,7 @@ class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProv
 
   Widget _buildBody(VendorController controller) {
     return RefreshIndicator(
-      onRefresh: () async => controller.notifyListeners(),
+      onRefresh: () async => await controller.refreshData(), // Changed to refreshData
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Padding(
@@ -198,7 +199,7 @@ class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProv
   }
 
   Widget _buildQuickStats(VendorController controller) {
-    final materials = controller.materials; // Changed from vendorData['products'] to controller.materials
+    final materials = controller.materials;
     final totalSales = controller.orders.fold<double>(0, (sum, order) => sum + (order.amount ?? 0.0));
     return Row(
       children: [
@@ -348,7 +349,6 @@ class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProv
     );
   }
 }
-
 
 
 

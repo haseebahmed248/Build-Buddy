@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -26,11 +25,15 @@ class ContractorController with ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _materialsSubscription;
 
   ContractorController(this._authController) {
+    print('ContractorController initialized');
     _checkContractorStatus();
     _authController.addListener(_onAuthStateChanged);
   }
 
-  void _onAuthStateChanged() => _checkContractorStatus();
+  void _onAuthStateChanged() {
+    print('Auth state changed');
+    _checkContractorStatus();
+  }
 
   void _checkContractorStatus() {
     final user = _authController.currentUser.value;
@@ -46,6 +49,7 @@ class ContractorController with ChangeNotifier {
 
   Future<void> _startRealTimeListeners() async {
     final user = _auth.currentUser;
+    print('Firebase Auth User UID: ${user?.uid}');
     if (user == null) {
       _errorMessage = 'User not authenticated. Attempting to wait for authentication...';
       print('Authentication failed: user is null');
@@ -75,7 +79,7 @@ class ContractorController with ChangeNotifier {
           }
         } else {
           _orders = [];
-          _errorMessage = 'No orders found for this contractor';
+          _errorMessage = null; // No orders found is not an error
         }
         notifyListeners();
       },
@@ -119,6 +123,7 @@ class ContractorController with ChangeNotifier {
   }
 
   void _stopRealTimeListeners() {
+    print('Stopping real-time listeners');
     _ordersSubscription?.cancel();
     _materialsSubscription?.cancel();
     _orders.clear();
@@ -130,8 +135,10 @@ class ContractorController with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      print('Attempting to place order with UID: ${_auth.currentUser?.uid}');
       if (_vendorMaterials.isEmpty) {
         _errorMessage = 'No materials available to order.';
+        print('No materials available');
         _isLoading = false;
         notifyListeners();
         return;
@@ -142,6 +149,7 @@ class ContractorController with ChangeNotifier {
               (m) => m['materialId'] == materialId && m['vendorId'] == vendorId,
           orElse: () => throw Exception('Material not found'),
         );
+        print('Placing order: $orderId, Material: ${material['name']}, Quantity: $quantity');
         await _database.child('orders/$orderId').set({
           'contractorId': _auth.currentUser!.uid,
           'vendorId': vendorId,
@@ -153,8 +161,12 @@ class ContractorController with ChangeNotifier {
           'createdAt': DateTime.now().toIso8601String(),
         });
         _errorMessage = null;
+        print('Order placed successfully: $orderId');
+      } else {
+        throw Exception('Failed to generate order ID');
       }
     } catch (e) {
+      print('Place order error: $e');
       _errorMessage = 'Failed to place order: $e';
     } finally {
       _isLoading = false;
@@ -166,9 +178,12 @@ class ContractorController with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      print('Cancelling order: $orderId');
       await _database.child('orders/$orderId/status').set('Cancelled');
       _errorMessage = null;
+      print('Order cancelled successfully: $orderId');
     } catch (e) {
+      print('Cancel order error: $e');
       _errorMessage = 'Failed to cancel order: $e';
     } finally {
       _isLoading = false;
@@ -178,6 +193,7 @@ class ContractorController with ChangeNotifier {
 
   @override
   void dispose() {
+    print('Disposing ContractorController');
     _stopRealTimeListeners();
     _authController.removeListener(_onAuthStateChanged);
     super.dispose();

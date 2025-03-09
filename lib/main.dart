@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:buildbuddy/Controllers/adminController.dart' as admin;
 import 'package:buildbuddy/Controllers/projectController.dart';
 import 'package:buildbuddy/Controllers/vendorController.dart';
-import 'package:buildbuddy/Controllers/contractorController.dart'; // Import ContractorController
+import 'package:buildbuddy/Controllers/contractorController.dart';
 import 'package:buildbuddy/Models/userModels.dart';
 import 'package:buildbuddy/firebase_options.dart';
 
@@ -21,14 +21,24 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    print('Firebase initialized successfully');
   } catch (e) {
     print('Failed to initialize Firebase: $e');
-    // Optionally, show an error screen or fallback UI
+    runApp(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text('Failed to initialize Firebase. Please restart the app.'),
+          ),
+        ),
+      ),
+    );
+    return;
   }
 
   // Initialize global controllers with GetX
   final authController = Get.put(AuthController());
-  Get.put(ChatController()); // Ensure ChatController is initialized globally
+  Get.put(ChatController());
 
   runApp(
     MultiProvider(
@@ -37,13 +47,13 @@ void main() async {
           create: (_) => ProjectController('homeowner'),
         ),
         ChangeNotifierProvider<VendorController>(
-          create: (_) => VendorController(Get.find<AuthController>()), // Use Get.find to access AuthController
+          create: (_) => VendorController(Get.find<AuthController>()),
         ),
         ChangeNotifierProvider<ContractorController>(
-          create: (_) => ContractorController(Get.find<AuthController>()), // Add ContractorController
+          create: (_) => ContractorController(Get.find<AuthController>()),
         ),
         ProxyProvider<AuthController, admin.AdminController?>(
-          create: (_) => null, // Initial value (nullable)
+          create: (_) => null,
           update: (_, auth, previous) {
             final user = auth.currentUser.value;
             print(
@@ -80,7 +90,6 @@ class _MyAppState extends State<MyApp> {
         await _updateProjectController(userData.uid, userData.role);
       }
     });
-    // Ensure initial user check
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.authController.checkCurrentUser();
     });
@@ -114,7 +123,6 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
-
 
 
 

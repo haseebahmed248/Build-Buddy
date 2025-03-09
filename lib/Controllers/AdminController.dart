@@ -8,15 +8,11 @@ import 'package:buildbuddy/Models/contractorModel.dart';
 import 'package:buildbuddy/Models/userModels.dart';
 import 'dart:async';
 
-/// Manages admin-specific functionality, including user management, project monitoring,
-/// contractor management, settings, support tickets, content, and chat interactions.
-/// Aligns with SRS 3.1.1 (Admin Functionality), 3.2.1 (Performance), 3.2.2 (Usability),
-/// 3.2.3 (Security), and 3.2.4 (Reliability).
 class AdminController with ChangeNotifier {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final AuthController _authController; // Reference to AuthController for user data
-  final ChatController _chatController; // Reference to ChatController for chat access
+  final AuthController _authController;
+  final ChatController _chatController;
 
   List<UserData> _users = [];
   List<Project> _projects = [];
@@ -27,7 +23,6 @@ class AdminController with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  /// Getters for admin-managed data, ensuring real-time updates and usability (SRS 3.2.2).
   List<UserData> get users => _users;
   List<Project> get projects => _projects;
   List<Contractor> get contractors => _contractors;
@@ -36,30 +31,26 @@ class AdminController with ChangeNotifier {
   List<Map<String, dynamic>> get content => _content;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  String get userType => 'admin'; // Added for consistency
+  String get userType => 'admin';
 
   StreamSubscription<DatabaseEvent>? _usersSubscription;
   StreamSubscription<DatabaseEvent>? _projectsSubscription;
   StreamSubscription<DatabaseEvent>? _contractorsSubscription;
 
-  /// Constructor initializes with AuthController and ChatController for integrated functionality.
   AdminController(this._authController)
       : _chatController = ChatController() {
     _checkAdminStatus();
-    _authController.addListener(_onAuthStateChanged); // Listen to AuthController changes
+    _authController.addListener(_onAuthStateChanged);
   }
 
-  /// Handles authentication state changes to update admin status and listeners.
   void _onAuthStateChanged() {
     _checkAdminStatus();
   }
 
-  /// Checks if the current user is an admin, starting or stopping real-time listeners accordingly.
-  /// Ensures security and role-based access (SRS 3.2.3).
   Future<void> _checkAdminStatus() async {
     final isAdmin = _authController.currentUser.value?.role == UserRole.admin;
     if (isAdmin == true) {
-      _startRealTimeListeners(); // Only start listeners if user is an admin
+      _startRealTimeListeners();
     } else {
       _stopRealTimeListeners();
       _errorMessage = 'User is not an admin';
@@ -67,8 +58,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Starts real-time listeners for users, projects, and contractors, ensuring performance (SRS 3.2.1)
-  /// and real-time updates (SRS 3.2.2).
   void _startRealTimeListeners() {
     final user = _auth.currentUser;
     if (user == null) {
@@ -77,7 +66,6 @@ class AdminController with ChangeNotifier {
       return;
     }
 
-    // Real-time listener for users (all roles)
     _usersSubscription = _database.child('user').onValue.listen((event) {
       if (event.snapshot.exists) {
         final data = event.snapshot.value as Map<dynamic, dynamic>?;
@@ -110,14 +98,13 @@ class AdminController with ChangeNotifier {
       notifyListeners();
     });
 
-    // Real-time listener for projects (admin should see all projects, not filtered by userId)
     _projectsSubscription = _database.child('projects').onValue.listen((event) {
       if (event.snapshot.exists) {
         final data = event.snapshot.value as Map<dynamic, dynamic>?;
         if (data != null) {
           _projects = data.entries.map((entry) {
             final projectData = Map<String, dynamic>.from(entry.value as Map)
-              ..['id'] = entry.key; // Ensure id is included
+              ..['id'] = entry.key;
             return Project.fromMap(projectData);
           }).toList();
           notifyListeners();
@@ -135,7 +122,6 @@ class AdminController with ChangeNotifier {
       notifyListeners();
     });
 
-    // Real-time listener for contractors (stored under user/contractor)
     _contractorsSubscription = _database.child('user/contractor').onValue.listen((event) {
       if (event.snapshot.exists) {
         final data = event.snapshot.value as Map<dynamic, dynamic>?;
@@ -160,7 +146,6 @@ class AdminController with ChangeNotifier {
     });
   }
 
-  /// Stops real-time listeners, ensuring resource cleanup and reliability (SRS 3.2.4).
   void _stopRealTimeListeners() {
     _usersSubscription?.cancel();
     _projectsSubscription?.cancel();
@@ -171,10 +156,8 @@ class AdminController with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Checks if the current user is an admin, ensuring security (SRS 3.2.3).
   bool get isAdmin => _authController.currentUser.value?.role == UserRole.admin ?? false;
 
-  /// Loads settings synchronously for simplicity, with error handling for reliability (SRS 3.2.4).
   Future<void> loadSettings() async {
     _isLoading = true;
     notifyListeners();
@@ -183,7 +166,7 @@ class AdminController with ChangeNotifier {
       if (snapshot.exists && snapshot.value != null) {
         _settings = Map<String, dynamic>.from(snapshot.value as Map);
       } else {
-        _settings = {'notificationsEnabled': true, 'twoFactorAuthEnabled': false}; // Default settings
+        _settings = {'notificationsEnabled': true, 'twoFactorAuthEnabled': false};
       }
     } catch (e) {
       print('Error loading settings: $e');
@@ -193,7 +176,6 @@ class AdminController with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Loads support tickets synchronously, ensuring usability and reliability (SRS 3.2.2, 3.2.4).
   Future<void> loadSupportTickets() async {
     _isLoading = true;
     notifyListeners();
@@ -215,7 +197,6 @@ class AdminController with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Loads content synchronously, ensuring usability and reliability (SRS 3.2.2, 3.2.4).
   Future<void> loadContent() async {
     _isLoading = true;
     notifyListeners();
@@ -237,7 +218,6 @@ class AdminController with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Loads all users, restricted to admins for security (SRS 3.2.3).
   Future<void> loadUsers() async {
     _isLoading = true;
     notifyListeners();
@@ -250,9 +230,8 @@ class AdminController with ChangeNotifier {
         return;
       }
 
-      // Force refresh by clearing and re-fetching (real-time listener will update)
       _users.clear();
-      notifyListeners(); // Notify immediately to clear the list
+      notifyListeners();
     } catch (e) {
       print('Error loading users: $e');
       _errorMessage = 'Failed to load users: $e';
@@ -262,7 +241,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Loads all projects, restricted to admins for security (SRS 3.2.3).
   Future<void> loadProjects() async {
     _isLoading = true;
     notifyListeners();
@@ -281,7 +259,7 @@ class AdminController with ChangeNotifier {
         if (data != null) {
           _projects = data.entries.map((entry) {
             final projectData = Map<String, dynamic>.from(entry.value as Map)
-              ..['id'] = entry.key; // Ensure id is included
+              ..['id'] = entry.key;
             return Project.fromMap(projectData);
           }).toList();
         } else {
@@ -299,7 +277,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Loads all contractors, restricted to admins for security (SRS 3.2.3).
   Future<void> loadContractors() async {
     _isLoading = true;
     notifyListeners();
@@ -312,9 +289,8 @@ class AdminController with ChangeNotifier {
         return;
       }
 
-      // Force refresh by clearing and re-fetching (real-time listener will update)
       _contractors.clear();
-      notifyListeners(); // Notify immediately to clear the list
+      notifyListeners();
     } catch (e) {
       print('Error loading contractors: $e');
       _errorMessage = 'Failed to load contractors: $e';
@@ -324,11 +300,8 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Provides access to chat functionality for admins, ensuring usability (SRS 3.2.2)
-  /// and integration with the chat system across stakeholders.
   ChatController get chat => _chatController;
 
-  /// Creates a new user, restricted to admins for security (SRS 3.2.3).
   Future<void> createUser(String email, String password, UserRole role) async {
     _isLoading = true;
     notifyListeners();
@@ -360,7 +333,6 @@ class AdminController with ChangeNotifier {
       );
 
       await _database.child('user/${role.name}/${userData.uid}').set(userData.toJson());
-      // Real-time listener will update _users
     } catch (e) {
       print('Error creating user: $e');
       _errorMessage = 'Failed to create user: $e';
@@ -371,7 +343,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Updates an existing user, restricted to admins for security (SRS 3.2.3).
   Future<void> updateUser(UserData user) async {
     if (!isAdmin) {
       _errorMessage = 'Only admins can update users';
@@ -381,7 +352,6 @@ class AdminController with ChangeNotifier {
 
     try {
       await _database.child('user/${user.role.name}/${user.uid}').update(user.toJson());
-      // Real-time listener will update _users
     } catch (e) {
       print('Error updating user: $e');
       _errorMessage = 'Failed to update user: $e';
@@ -389,7 +359,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Deletes a user, restricted to admins for security (SRS 3.2.3).
   Future<void> deleteUser(String uid) async {
     if (!isAdmin) {
       _errorMessage = 'Only admins can delete users';
@@ -398,10 +367,8 @@ class AdminController with ChangeNotifier {
     }
 
     try {
-      // Find the user to determine their role
       final user = _users.firstWhere((u) => u.uid == uid, orElse: () => throw Exception('User not found'));
       await _database.child('user/${user.role.name}/$uid').remove();
-      // Real-time listener will update _users
     } catch (e) {
       print('Error deleting user: $e');
       _errorMessage = 'Failed to delete user: $e';
@@ -409,7 +376,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Suspends or activates a user, restricted to admins for security (SRS 3.2.3).
   Future<void> suspendUser(String uid, String status) async {
     if (!isAdmin) {
       _errorMessage = 'Only admins can suspend users';
@@ -418,10 +384,8 @@ class AdminController with ChangeNotifier {
     }
 
     try {
-      // Find the user to determine their role
       final user = _users.firstWhere((u) => u.uid == uid, orElse: () => throw Exception('User not found'));
       await _database.child('user/${user.role.name}/$uid/status').set(status);
-      // Real-time listener will update _users
     } catch (e) {
       print('Error suspending user: $e');
       _errorMessage = 'Failed to suspend user: $e';
@@ -429,7 +393,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Updates an existing project, restricted to admins for security (SRS 3.2.3).
   Future<void> updateProject(Project project) async {
     if (!isAdmin) {
       _errorMessage = 'Only admins can update projects';
@@ -438,8 +401,7 @@ class AdminController with ChangeNotifier {
     }
 
     try {
-      await _database.child('projects').child(project.id).update(project.toMap()); // Changed toMap()
-      // Real-time listener will update _projects
+      await _database.child('projects').child(project.id).update(project.toMap());
     } catch (e) {
       print('Error updating project: $e');
       _errorMessage = 'Failed to update project: $e';
@@ -447,7 +409,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Deletes a project, restricted to admins for security (SRS 3.2.3).
   Future<void> deleteProject(String projectId) async {
     if (!isAdmin) {
       _errorMessage = 'Only admins can delete projects';
@@ -457,7 +418,6 @@ class AdminController with ChangeNotifier {
 
     try {
       await _database.child('projects').child(projectId).remove();
-      // Real-time listener will update _projects
     } catch (e) {
       print('Error deleting project: $e');
       _errorMessage = 'Failed to delete project: $e';
@@ -465,7 +425,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Updates application settings, restricted to admins for security (SRS 3.2.3).
   Future<void> updateSettings(Map<String, dynamic> settings) async {
     if (!isAdmin) {
       _errorMessage = 'Only admins can update settings';
@@ -475,7 +434,7 @@ class AdminController with ChangeNotifier {
 
     try {
       await _database.child('settings').update(settings);
-      await loadSettings(); // Refresh settings synchronously for consistency
+      await loadSettings();
     } catch (e) {
       print('Error updating settings: $e');
       _errorMessage = 'Failed to update settings: $e';
@@ -483,7 +442,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Updates a support ticket, restricted to admins for security (SRS 3.2.3).
   Future<void> updateSupportTicket(String ticketId, String status) async {
     if (!isAdmin) {
       _errorMessage = 'Only admins can update support tickets';
@@ -498,7 +456,7 @@ class AdminController with ChangeNotifier {
         'timestamp': DateTime.now().toIso8601String(),
       };
       await _database.child('supportTickets').child(ticketId).update(updatedTicket);
-      await loadSupportTickets(); // Refresh tickets synchronously for consistency
+      await loadSupportTickets();
     } catch (e) {
       print('Error updating support ticket: $e');
       _errorMessage = 'Failed to update support ticket: $e';
@@ -506,7 +464,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Creates or updates content, restricted to admins for security (SRS 3.2.3).
   Future<void> updateContent(String type, String content) async {
     if (!isAdmin) {
       _errorMessage = 'Only admins can update content';
@@ -522,7 +479,7 @@ class AdminController with ChangeNotifier {
       };
       final contentRef = _database.child('content').push();
       await contentRef.set(newContent);
-      await loadContent(); // Refresh content synchronously for consistency
+      await loadContent();
     } catch (e) {
       print('Error updating content: $e');
       _errorMessage = 'Failed to update content: $e';
@@ -530,7 +487,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Edits existing content, restricted to admins for security (SRS 3.2.3).
   Future<void> editContent(String contentId, String type, String content) async {
     if (!isAdmin) {
       _errorMessage = 'Only admins can edit content';
@@ -545,7 +501,7 @@ class AdminController with ChangeNotifier {
         'timestamp': DateTime.now().toIso8601String(),
       };
       await _database.child('content').child(contentId).update(updatedContent);
-      await loadContent(); // Refresh content synchronously for consistency
+      await loadContent();
     } catch (e) {
       print('Error editing content: $e');
       _errorMessage = 'Failed to edit content: $e';
@@ -553,7 +509,6 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Deletes existing content, restricted to admins for security (SRS 3.2.3).
   Future<void> deleteContent(String contentId) async {
     if (!isAdmin) {
       _errorMessage = 'Only admins can delete content';
@@ -563,7 +518,7 @@ class AdminController with ChangeNotifier {
 
     try {
       await _database.child('content').child(contentId).remove();
-      await loadContent(); // Refresh content synchronously for consistency
+      await loadContent();
     } catch (e) {
       print('Error deleting content: $e');
       _errorMessage = 'Failed to delete content: $e';
@@ -571,17 +526,14 @@ class AdminController with ChangeNotifier {
     }
   }
 
-  /// Cleans up resources, ensuring reliability (SRS 3.2.4).
   @override
   void dispose() {
     _stopRealTimeListeners();
     _authController.removeListener(_onAuthStateChanged);
-    _chatController.dispose(); // Clean up ChatController
+    _chatController.dispose();
     super.dispose();
   }
 }
-
-
 
 
 

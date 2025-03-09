@@ -9,62 +9,131 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  // Moved to a separate class for better organization
   static const _gradientColors = [
     Color(0xFF1E3799), // Deep Blue
     Color(0xFF4834DF), // Royal Blue
   ];
 
-  final List<QuickAction> _quickActions = [
-    QuickAction(
-      icon: Icons.construction_outlined,
-      label: 'Projects',
-      color: const Color(0xFF1E3799),
-      onTap: () {/* Navigate to Projects */},
-    ),
-    QuickAction(
-      icon: Icons.storefront_outlined,
-      label: 'Vendors',
-      color: const Color(0xFF4834DF),
-      onTap: () {/* Navigate to Vendors */},
-    ),
-    QuickAction(
-      icon: Icons.engineering_outlined,
-      label: 'Architect Plans',
-      color: const Color(0xFF3498DB),
-      onTap: () {/* Navigate to Architect Plans */},
-    ),
-    QuickAction(
-      icon: Icons.attach_money_outlined,
-      label: 'Payments',
-      color: const Color(0xFF2ECC71),
-      onTap: () {/* Navigate to Payments */},
-    ),
-    QuickAction(
-      icon: Icons.file_copy_outlined,
-      label: 'Documents',
-      color: const Color(0xFFF1C40F),
-      onTap: () {/* Navigate to Documents */},
-    ),
-    QuickAction(
-      icon: Icons.chat_outlined,
-      label: 'Chat',
-      color: const Color(0xFFE74C3C),
-      onTap: () {/* Navigate to Chat */},
-    ),
-    QuickAction(
-      icon: Icons.payment_outlined,
-      label: 'Invoices',
-      color: const Color(0xFF9B59B6),
-      onTap: () {/* Navigate to Invoices */},
-    ),
-    QuickAction(
-      icon: Icons.star_border_outlined,
-      label: 'Reviews',
-      color: const Color(0xFFE67E22),
-      onTap: () {/* Navigate to Reviews */},
-    ),
-  ];
+  List<QuickAction> _getQuickActions() {
+    return [
+      QuickAction(
+        icon: Icons.construction_outlined,
+        label: 'Projects',
+        color: const Color(0xFF1E3799),
+        onTap: () {
+          _showGuideDialog(
+            context,
+            'Projects Guide',
+            'Create, edit, and track your home construction projects with real-time updates and milestone tracking.',
+          );
+        },
+      ),
+      QuickAction(
+        icon: Icons.storefront_outlined,
+        label: 'Vendors',
+        color: const Color(0xFF4834DF),
+        onTap: () {
+          _showGuideDialog(
+            context,
+            'Vendors Guide',
+            'Browse real-time material pricing and availability, place orders, and track deliveries from trusted vendors.',
+          );
+        },
+      ),
+      QuickAction(
+        icon: Icons.engineering_outlined,
+        label: 'Architect Plans',
+        color: const Color(0xFF3498DB),
+        onTap: () {
+          _showGuideDialog(
+            context,
+            'Architect Plans Guide',
+            'Collaborate with architects, view and provide feedback on designs, and manage customization in real-time.',
+          );
+        },
+      ),
+      QuickAction(
+        icon: Icons.attach_money_outlined,
+        label: 'Payments',
+        color: const Color(0xFF2ECC71),
+        onTap: () {
+          _showGuideDialog(
+            context,
+            'Payments Guide',
+            'Securely process payments via credit card or bank transfer, and receive detailed invoices for all transactions.',
+          );
+        },
+      ),
+      QuickAction(
+        icon: Icons.file_copy_outlined,
+        label: 'Documents',
+        color: const Color(0xFFF1C40F),
+        onTap: () {
+          _showGuideDialog(
+            context,
+            'Documents Guide',
+            'Store and manage project-related documents like plans, invoices, and contracts in one place.',
+          );
+        },
+      ),
+      QuickAction(
+        icon: Icons.chat_outlined,
+        label: 'Chat',
+        color: const Color(0xFFE74C3C),
+        onTap: () {
+          _showGuideDialog(
+            context,
+            'Chat Guide',
+            'Communicate securely with homeowners, contractors, and vendors in real-time with message history.',
+          );
+        },
+      ),
+      QuickAction(
+        icon: Icons.payment_outlined,
+        label: 'Invoices',
+        color: const Color(0xFF9B59B6),
+        onTap: () {
+          _showGuideDialog(
+            context,
+            'Invoices Guide',
+            'Generate detailed invoices automatically after payments or services, with easy tracking.',
+          );
+        },
+      ),
+      QuickAction(
+        icon: Icons.star_border_outlined,
+        label: 'Reviews',
+        color: const Color(0xFFE67E22),
+        onTap: () {
+          _showGuideDialog(
+            context,
+            'Reviews Guide',
+            'Rate and review contractors, vendors, and architects to ensure quality and transparency.',
+          );
+        },
+      ),
+    ];
+  }
+
+  void _showGuideDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +236,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   const SizedBox(height: 24),
                   _buildQuickActionsSection(),
                   const SizedBox(height: 24),
-                  _buildUpdatesSection(),
+                  _buildWhyChooseUsSection(),
                 ],
               ),
             ),
@@ -290,9 +359,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 crossAxisSpacing: 16,
                 childAspectRatio: 1,
               ),
-              itemCount: _quickActions.length,
+              itemCount: _getQuickActions().length,
               itemBuilder: (context, index) => QuickActionCard(
-                action: _quickActions[index],
+                action: _getQuickActions()[index],
               ),
             );
           },
@@ -301,12 +370,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
-  Widget _buildUpdatesSection() {
+  Widget _buildWhyChooseUsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Latest Updates',
+          'Why Choose Us?',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -321,27 +390,27 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             physics: const NeverScrollableScrollPhysics(),
             children: [
               UpdateItem(
-                icon: Icons.architecture,
-                title: 'New Project Start',
-                subtitle: 'Residential Complex Project Initialized',
+                icon: Icons.verified_user,
+                title: 'Trusted by All',
+                subtitle: 'Connects homeowners, contractors, architects, and vendors seamlessly.',
                 color: const Color(0xFF3498DB),
-                onTap: () {/* Handle tap */},
+                onTap: () {},
               ),
               const Divider(height: 1),
               UpdateItem(
-                icon: Icons.payments_outlined,
-                title: 'Payment Update',
-                subtitle: 'Last Invoice Processed Successfully',
+                icon: Icons.speed,
+                title: 'Fast & Efficient',
+                subtitle: 'Streamline your construction process with real-time tools.',
                 color: const Color(0xFF2ECC71),
-                onTap: () {/* Handle tap */},
+                onTap: () {},
               ),
               const Divider(height: 1),
               UpdateItem(
-                icon: Icons.file_copy_outlined,
-                title: 'Document Review',
-                subtitle: 'Architect Plans Approved',
+                icon: Icons.lock,
+                title: 'Safe & Secure',
+                subtitle: 'Enjoy encrypted communication and secure payments.',
                 color: const Color(0xFFF1C40F),
-                onTap: () {/* Handle tap */},
+                onTap: () {},
               ),
             ],
           ),
@@ -386,7 +455,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 }
 
-// Extracted into separate classes for better reusability
 class QuickAction {
   final IconData icon;
   final String label;
@@ -426,7 +494,6 @@ class QuickActionCard extends StatelessWidget {
           ],
         ),
         child: LayoutBuilder(builder: (context, constraints) {
-          // Calculate appropriate sizes based on constraints
           final iconSize = constraints.maxWidth * 0.3;
           final fontSize = constraints.maxWidth * 0.15;
 

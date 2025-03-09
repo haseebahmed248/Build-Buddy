@@ -50,7 +50,49 @@ class MaterialOrdersScreen extends StatelessWidget {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(
             onPressed: () {
+              print('Placing order for material: ${material['name']} with quantity: $quantity');
               controller.placeOrder(material['vendorId'], material['materialId'], quantity);
+              Navigator.pop(context);
+            },
+            child: const Text('Place Order'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDedicatedPlaceOrderDialog(BuildContext context, ContractorController controller) {
+    if (controller.vendorMaterials.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No materials available to order.')),
+      );
+      return;
+    }
+
+    Map<String, dynamic> selectedMaterial = controller.vendorMaterials.first;
+    int quantity = 1;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Place Order for ${selectedMaterial['name']}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Price: \$${selectedMaterial['price']} per unit'),
+            TextField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Quantity'),
+              onChanged: (value) => quantity = int.tryParse(value) ?? 1,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              print('Placing order for material: ${selectedMaterial['name']} with quantity: $quantity');
+              controller.placeOrder(selectedMaterial['vendorId'], selectedMaterial['materialId'], quantity);
               Navigator.pop(context);
             },
             child: const Text('Place Order'),
@@ -62,9 +104,9 @@ class MaterialOrdersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Check if user is authenticated
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
+      print('User not authenticated in MaterialOrdersScreen');
       return Scaffold(
         body: Center(
           child: Column(
@@ -138,9 +180,20 @@ class MaterialOrdersScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.filter_list, color: Colors.white),
-                              onPressed: () {},
+                            Row(
+                              children: [
+                                TextButton(
+                                  onPressed: () => _showDedicatedPlaceOrderDialog(context, context.read<ContractorController>()),
+                                  child: const Text(
+                                    'Place Order',
+                                    style: TextStyle(color: Colors.white, fontSize: 16),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.filter_list, color: Colors.white),
+                                  onPressed: () {},
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -156,8 +209,12 @@ class MaterialOrdersScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF5F6FA),
       body: Consumer<ContractorController>(
         builder: (context, controller, child) {
-          if (controller.isLoading) return const Center(child: CircularProgressIndicator());
+          if (controller.isLoading) {
+            print('Loading state active');
+            return const Center(child: CircularProgressIndicator());
+          }
           if (controller.errorMessage != null) {
+            print('Error state: ${controller.errorMessage}');
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -166,7 +223,6 @@ class MaterialOrdersScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      // Instead of calling _checkContractorStatus, navigate to login screen to reinitialize
                       Navigator.pushReplacementNamed(context, '/stakeholder');
                     },
                     child: const Text('Sign In Again to Retry'),
@@ -175,6 +231,7 @@ class MaterialOrdersScreen extends StatelessWidget {
               ),
             );
           }
+          print('Rendering materials: ${controller.vendorMaterials.length} items');
           return ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
@@ -182,61 +239,79 @@ class MaterialOrdersScreen extends StatelessWidget {
                 'Available Materials',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              ...controller.vendorMaterials.map((material) => Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16.0),
-                  title: Text(
-                    material['name'],
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              if (controller.vendorMaterials.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Text(
+                    'No materials available.',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
-                  subtitle: Text(
-                    'Price: \$${material['price']}, Available: ${material['quantity'] ?? 'N/A'}',
-                    style: TextStyle(color: Colors.grey[600]),
+                )
+              else
+                ...controller.vendorMaterials.map((material) => Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16.0),
+                    title: Text(
+                      material['name'],
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    subtitle: Text(
+                      'Price: \$${material['price']}, Available: ${material['quantity'] ?? 'N/A'}',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.add_shopping_cart, color: Color(0xFF4834DF)),
+                      onPressed: () => _showPlaceOrderDialog(context, controller, material),
+                    ),
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.add_shopping_cart, color: Color(0xFF4834DF)),
-                    onPressed: () => _showPlaceOrderDialog(context, controller, material),
-                  ),
-                ),
-              )),
+                )),
               const SizedBox(height: 20),
               const Text(
                 'My Orders',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              ...controller.orders.map((order) => Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16.0),
-                  title: Text(
-                    'Order #${order.id} - ${order.material}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              if (controller.orders.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Text(
+                    'No orders found.',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
-                  subtitle: Text(
-                    'Quantity: ${order.quantity}, Status: ${order.status}',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '\$${order.amount.toStringAsFixed(2)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4834DF)),
-                      ),
-                      if (order.status != 'Cancelled')
-                        IconButton(
-                          icon: const Icon(Icons.cancel, color: Colors.red),
-                          onPressed: () => _showCancelOrderDialog(context, controller, order),
+                )
+              else
+                ...controller.orders.map((order) => Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16.0),
+                    title: Text(
+                      'Order #${order.id} - ${order.material}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    subtitle: Text(
+                      'Quantity: ${order.quantity}, Status: ${order.status}',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '\$${order.amount.toStringAsFixed(2)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4834DF)),
                         ),
-                    ],
+                        if (order.status != 'Cancelled')
+                          IconButton(
+                            icon: const Icon(Icons.cancel, color: Colors.red),
+                            onPressed: () => _showCancelOrderDialog(context, controller, order),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              )),
+                )),
             ],
           );
         },
