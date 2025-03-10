@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:buildbuddy/Controllers/authControllers.dart'; // Assuming AuthController exists
+import 'package:buildbuddy/Controllers/authControllers.dart';
 
 class ChatScreen extends StatefulWidget {
   final String projectId;

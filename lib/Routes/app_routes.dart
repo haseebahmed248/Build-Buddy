@@ -67,6 +67,7 @@ import '../Views/DashBoard/Architect/viewProjectPlans.dart';
 
 // Chat Screen with alias to avoid conflict
 import '../Views/DashBoard/chatScreen.dart' as ChatScreenImport;
+import '../Views/Shared/HelpandSupport.dart';
 
 // Custom middleware for role-based access control
 class RoleBasedMiddleware extends GetMiddleware {
@@ -274,6 +275,13 @@ class AppRoutes {
       ],
     ),
     GetPage(
+      name: '/homeowner-help',
+      page: () => const HelpAndSupportScreen(stakeholderRole: UserRole.homeowner),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.homeowner),
+      ],
+    ),
+    GetPage(
       name: '/homeowner-chat',
       page: () => ChatScreenImport.ChatScreen(projectId: '', projectTitle: ''),
       middlewares: [
@@ -334,6 +342,13 @@ class AppRoutes {
         RoleBasedMiddleware(UserRole.contractor),
       ],
     ),
+    GetPage(
+      name: '/contractor-help',
+      page: () => const HelpAndSupportScreen(stakeholderRole: UserRole.contractor),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.contractor),
+      ],
+    ),
 
     // Architect Dashboard (Restricted to architects)
     GetPage(
@@ -368,6 +383,13 @@ class AppRoutes {
     GetPage(
       name: '/review-contractor-tasks',
       page: () => ReviewContractorTasksScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.architect),
+      ],
+    ),
+    GetPage(
+      name: '/architect-help',
+      page: () => const HelpAndSupportScreen(stakeholderRole: UserRole.architect),
       middlewares: [
         RoleBasedMiddleware(UserRole.architect),
       ],
@@ -427,6 +449,13 @@ class AppRoutes {
     GetPage(
       name: '/vendor-support',
       page: () => VendorSupportScreen(),
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+    GetPage(
+      name: '/vendor-help',
+      page: () => const HelpAndSupportScreen(stakeholderRole: UserRole.vendor),
       middlewares: [
         RoleBasedMiddleware(UserRole.vendor),
       ],

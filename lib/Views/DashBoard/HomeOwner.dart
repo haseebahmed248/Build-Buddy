@@ -1,196 +1,3 @@
-/*import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
-//import 'package:buildbuddy/Controllers/authController.dart';
-import 'package:buildbuddy/Controllers/authControllers.dart';
-import '../Shared/widgets/appBarColor.dart';
-
-class HomeOwnerDashboard extends StatefulWidget {
-  const HomeOwnerDashboard({super.key});
-
-  @override
-  HomeOwnerDashboardState createState() => HomeOwnerDashboardState();
-}
-
-class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
-    with SingleTickerProviderStateMixin {
-  final AuthController _authController = Get.find<AuthController>();
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  final DatabaseReference _messagesRef = FirebaseDatabase.instance.ref().child('messages/homeowner');
-  final TextEditingController _messageController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _messageController.dispose();
-    super.dispose();
-  }
-
-  void _sendMessage() {
-    if (_messageController.text.isNotEmpty) {
-      _messagesRef.push().set({
-        'text': _messageController.text,
-        'sender': FirebaseAuth.instance.currentUser?.uid,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
-      _messageController.clear();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: _buildAppBar(),
-      body: Obx(() {
-        final userData = _authController.currentUser.value;
-        if (userData == null) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2196F3)),
-            ),
-          );
-        }
-        return FadeTransition(
-          opacity: _fadeAnimation,
-          //child: _buildBody(userData),
-        );
-      }),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      elevation: 0,
-      backgroundColor: kAppBarColor,
-      title: const Text(
-        'Build Buddy',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 22,
-        ),
-      ),
-      actions: [
-        IconButton(
-          icon: Icon(Icons.chat),
-          onPressed: () {
-            Get.to(() => HomeownerChatScreen());
-          },
-        ),
-        _buildNotificationButton(),
-        _buildProfileButton(),
-      ],
-    );
-  }
-
-  Widget _buildNotificationButton() {
-    return Stack(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined, color: Color(0xFF1E1E1E)),
-          onPressed: () => Get.toNamed('notifications'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfileButton() {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16.0),
-      child: IconButton(
-        icon: const Icon(Icons.logout, color: Color(0xFF1E1E1E)), onPressed: () {  },
-       // onPressed: _handleSignOut,
-      ),
-    );
-  }
-}
-
-class HomeownerChatScreen extends StatelessWidget {
-  final DatabaseReference _messagesRef = FirebaseDatabase.instance.ref().child('messages/homeowner');
-  final TextEditingController _messageController = TextEditingController();
-
-  void _sendMessage() {
-    if (_messageController.text.isNotEmpty) {
-      _messagesRef.push().set({
-        'text': _messageController.text,
-        'sender': FirebaseAuth.instance.currentUser?.uid,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
-      _messageController.clear();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Homeowner Chat')),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder(
-              stream: _messagesRef.orderByChild('timestamp').onValue,
-              builder: (context, AsyncSnapshot snapshot) {
-                if (snapshot.hasData && snapshot.data.snapshot.value != null) {
-                  Map<dynamic, dynamic> messages = snapshot.data.snapshot.value;
-                  List messageList = messages.values.toList();
-                  messageList.sort((a, b) => a['timestamp'].compareTo(b['timestamp']));
-
-                  return ListView.builder(
-                    itemCount: messageList.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        title: Text(messageList[index]['text']),
-                        subtitle: Text('Sender: ${messageList[index]['sender']}'),
-                      );
-                    },
-                  );
-                }
-                return Center(child: CircularProgressIndicator());
-              },
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(hintText: 'Enter message...'),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: _sendMessage,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}*/
-
-
-/////////
-
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -200,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../Shared/widgets/appBarColor.dart';
 import 'HomeOwner/chat/homeowner_chat_screen.dart';
 import 'package:buildbuddy/Models/projectModel.dart'; // Import for ProjectStatus
+import 'package:buildbuddy/Views/Shared/HelpandSupport.dart';
 
 class HomeOwnerDashboard extends StatefulWidget {
   const HomeOwnerDashboard({super.key});
@@ -600,12 +408,13 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
         'color': const Color(0xFF9C27B0),
         'route': '/rate-review'
       },
-      {
+     /* {
         'title': 'Support',
         'icon': Icons.help_outline,
         'color': const Color(0xFF607D8B),
         'route': '/support'
-      },
+      },*/
+      {'title': 'Support', 'icon': Icons.help_outline, 'color': const Color(0xFF607D8B), 'route': '/homeowner-help'},
     ];
 
     return GridView.builder(

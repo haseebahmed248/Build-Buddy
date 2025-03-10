@@ -377,6 +377,7 @@ class ContractorDashboardState extends State<ContractorDashboard>
         'route': '/contractor-reviews',
         'color': const Color(0xFF9C27B0),
       },
+      {'title': 'Help & Support', 'icon': Icons.help_outline, 'route': '/contractor-help', 'color': const Color(0xFF607D8B)},
     ];
 
     return GridView.builder(
