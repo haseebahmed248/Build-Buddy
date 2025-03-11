@@ -1,4 +1,3 @@
-// lib/Models/professionalModel.dart
 class Professional {
   final String uid;
   final String? name;

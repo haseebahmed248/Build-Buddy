@@ -1,4 +1,3 @@
-// lib/Services/projects/projectService.dart
 import 'package:firebase_database/firebase_database.dart';
 import 'package:buildbuddy/Models/projectModel.dart';
 import 'package:buildbuddy/Models/Professional.dart';
@@ -119,7 +118,6 @@ class ProjectService {
 
         final List<Professional> professionals = [];
         for (String id in professionalIds) {
-          // Fetch contractor
           final contractorSnapshot = await _database.child('user/contractor/$id').get();
           if (contractorSnapshot.exists && contractorSnapshot.value != null) {
             final contractorData = Map<String, dynamic>.from(contractorSnapshot.value as Map);
@@ -129,10 +127,9 @@ class ProjectService {
             } catch (e) {
               print('Error parsing contractor $id: $e');
             }
-            continue; // Skip architect check if contractor is found
+            continue;
           }
 
-          // Fetch architect
           final architectSnapshot = await _database.child('user/architect/$id').get();
           if (architectSnapshot.exists && architectSnapshot.value != null) {
             final architectData = Map<String, dynamic>.from(architectSnapshot.value as Map);
@@ -152,36 +149,59 @@ class ProjectService {
       throw Exception('Failed to fetch professionals: $e');
     }
   }
-  Future<Map<String, List<Map<String, dynamic>>>> getAllReviews() async {
+
+  Future<List<Professional>> getUsersForContractor(String contractorId) async {
     try {
-      final snapshot = await _database.child('reviews').get();
+      final snapshot = await _database.child('projects').orderByChild('assignedContractorId').equalTo(contractorId).get();
       if (snapshot.exists && snapshot.value != null) {
-        final data = Map<String, dynamic>.from(snapshot.value as Map);
-        Map<String, List<Map<String, dynamic>>> professionalReviews = {};
-
-        data.forEach((reviewId, reviewData) {
-          if (reviewData is Map) {
-            final review = Map<String, dynamic>.from(reviewData);
-            String professionalId = review['professionalId'] ?? '';
-
-            if (professionalId.isNotEmpty) {
-              if (!professionalReviews.containsKey(professionalId)) {
-                professionalReviews[professionalId] = [];
-              }
-              review['id'] = reviewId; // Store the review ID as well
-              professionalReviews[professionalId]!.add(review);
+        final projectsData = Map<String, dynamic>.from(snapshot.value as Map);
+        final List<String> userIds = [];
+        projectsData.forEach((_, projectData) {
+          if (projectData is Map) {
+            final projectMap = Map<String, dynamic>.from(projectData);
+            if (projectMap['userId'] != null && !userIds.contains(projectMap['userId'])) {
+              userIds.add(projectMap['userId']);
+            }
+            if (projectMap['vendorId'] != null && !userIds.contains(projectMap['vendorId'])) {
+              userIds.add(projectMap['vendorId']);
             }
           }
         });
 
-        return professionalReviews;
+        final List<Professional> users = [];
+        for (String id in userIds) {
+          final homeownerSnapshot = await _database.child('user/homeowner/$id').get();
+          if (homeownerSnapshot.exists && homeownerSnapshot.value != null) {
+            final homeownerData = Map<String, dynamic>.from(homeownerSnapshot.value as Map);
+            homeownerData['uid'] = id;
+            try {
+              users.add(Professional.fromMap({...homeownerData, 'role': 'Homeowner'}));
+            } catch (e) {
+              print('Error parsing homeowner $id: $e');
+            }
+            continue;
+          }
+
+          final vendorSnapshot = await _database.child('user/vendor/$id').get();
+          if (vendorSnapshot.exists && vendorSnapshot.value != null) {
+            final vendorData = Map<String, dynamic>.from(vendorSnapshot.value as Map);
+            vendorData['uid'] = id;
+            try {
+              users.add(Professional.fromMap({...vendorData, 'role': 'Vendor'}));
+            } catch (e) {
+              print('Error parsing vendor $id: $e');
+            }
+          }
+        }
+        return users;
       }
-      return {};
+      return [];
     } catch (e) {
-      print('Error fetching reviews: $e');
-      throw Exception('Failed to fetch reviews: $e');
+      print('Error fetching users: $e');
+      throw Exception('Failed to fetch users: $e');
     }
   }
+
   Future<void> createProject(Project project) async {
     try {
       await _database.child('projects/${project.id}').set(project.toMap());
@@ -190,13 +210,6 @@ class ProjectService {
       throw Exception('Failed to create project: $e');
     }
   }
-
-
-  /////
-
-
-  ////
-
 
   Future<void> updateProject(Project project) async {
     try {
@@ -244,9 +257,9 @@ class ProjectService {
 
   Future<void> saveReview(String projectId, String professionalId, String userId, int rating, String review, String professionalRole) async {
     try {
-      final reviewId = _database.child('reviews').push().key;
+      final reviewId = _database.child('reviews/homeowner_reviews').push().key;
       if (reviewId == null) throw Exception('Failed to generate review ID');
-      await _database.child('reviews/$reviewId').set({
+      await _database.child('reviews/homeowner_reviews/$reviewId').set({
         'projectId': projectId,
         'professionalId': professionalId,
         'userId': userId,
@@ -259,6 +272,27 @@ class ProjectService {
     } catch (e) {
       print('Error saving review: $e');
       throw Exception('Failed to save review: $e');
+    }
+  }
+
+  Future<void> saveContractorReview(String projectId, String contractorId, String reviewedUserId, String userId, int rating, String review, String reviewedUserRole) async {
+    try {
+      final reviewId = _database.child('reviews/contractor_reviews/$contractorId').push().key;
+      if (reviewId == null) throw Exception('Failed to generate review ID');
+      await _database.child('reviews/contractor_reviews/$contractorId/$reviewId').set({
+        'projectId': projectId,
+        'contractorId': contractorId,
+        'reviewedUserId': reviewedUserId,
+        'userId': userId,
+        'rating': rating,
+        'review': review,
+        'reviewedUserRole': reviewedUserRole,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      await _database.child('projects/$projectId').update({'reviewed': true});
+    } catch (e) {
+      print('Error saving contractor review: $e');
+      throw Exception('Failed to save contractor review: $e');
     }
   }
 
@@ -333,8 +367,3 @@ class ProjectService {
     }
   }
 }
-
-
-
-
-

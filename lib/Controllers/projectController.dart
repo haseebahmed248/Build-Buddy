@@ -15,7 +15,8 @@ class ProjectController extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   List<Project> _projects = [];
-  List<Professional> _professionals = []; // Unified list
+  List<Professional> _professionals = []; // For contractors and architects
+  List<Professional> _users = []; // For homeowners and vendors (now using Professional)
   bool _isLoading = false;
   String _userType = 'homeowner';
   int _activeProjectsCount = 0;
@@ -24,7 +25,8 @@ class ProjectController extends ChangeNotifier {
   String? _errorMessage;
 
   StreamSubscription? _projectsSubscription;
-  StreamSubscription? _professionalsSubscription; // Unified subscription
+  StreamSubscription? _professionalsSubscription;
+  StreamSubscription? _usersSubscription;
   final Map<String, StreamSubscription> _messageSubscriptions = {};
 
   ProjectController(String userType)
@@ -34,7 +36,8 @@ class ProjectController extends ChangeNotifier {
   }
 
   List<Project> get projects => _projects;
-  List<Professional> get professionals => _professionals; // Updated getter
+  List<Professional> get professionals => _professionals;
+  List<Professional> get users => _users; // Now returns Professional instead of UserEntity
   bool get isLoading => _isLoading;
   String get userType => _userType;
   int get activeProjectsCount => _activeProjectsCount;
@@ -52,6 +55,7 @@ class ProjectController extends ChangeNotifier {
       _userType = newUserType;
       _projects.clear();
       _professionals.clear();
+      _users.clear();
       _errorMessage = null;
       _startRealTimeListeners();
       notifyListeners();
@@ -170,6 +174,7 @@ class ProjectController extends ChangeNotifier {
             }
           });
           print('Final professionals list: ${_professionals.length} professionals');
+          _applyReviewsToProfessionals();
           notifyListeners();
         }
       }, onError: (error) {
@@ -178,6 +183,45 @@ class ProjectController extends ChangeNotifier {
         Get.snackbar('Warning', _errorMessage!,
             snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange);
         _professionals.clear();
+        notifyListeners();
+      });
+    } else if (_userType == 'contractor') {
+      _usersSubscription = _database.child('user').onValue.listen((event) {
+        print('Users listener triggered: snapshot exists=${event.snapshot.exists}');
+        if (event.snapshot.exists && event.snapshot.value != null) {
+          final data = event.snapshot.value as Map<dynamic, dynamic>;
+          _users.clear();
+          data.forEach((type, typeData) {
+            if (typeData is Map && (type == 'homeowner' || type == 'vendor')) {
+              typeData.forEach((uid, userData) {
+                if (userData is Map) {
+                  final userMap = Map<String, dynamic>.from(userData);
+                  userMap['uid'] = uid;
+                  try {
+                    if (type == 'homeowner') {
+                      _users.add(Professional.fromMap({...userMap, 'role': 'Homeowner'}));
+                    } else if (type == 'vendor') {
+                      _users.add(Professional.fromMap({...userMap, 'role': 'Vendor'}));
+                    }
+                    print('Adding user: $uid, type: $type');
+                  } catch (e) {
+                    _errorMessage = 'Error parsing user $uid: $e';
+                    print(_errorMessage);
+                  }
+                }
+              });
+            }
+          });
+          print('Final users list: ${_users.length} users');
+          _applyContractorReviewsToUsers();
+          notifyListeners();
+        }
+      }, onError: (error) {
+        _errorMessage = 'Error loading users: $error';
+        print(_errorMessage);
+        Get.snackbar('Warning', _errorMessage!,
+            snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange);
+        _users.clear();
         notifyListeners();
       });
     }
@@ -223,10 +267,12 @@ class ProjectController extends ChangeNotifier {
   void _stopRealTimeListeners() {
     _projectsSubscription?.cancel();
     _professionalsSubscription?.cancel();
+    _usersSubscription?.cancel();
     _messageSubscriptions.forEach((_, subscription) => subscription.cancel());
     _messageSubscriptions.clear();
     _projects.clear();
     _professionals.clear();
+    _users.clear();
     _errorMessage = null;
     print('Stopped all real-time listeners');
   }
@@ -290,23 +336,20 @@ class ProjectController extends ChangeNotifier {
     }
     notifyListeners();
   }
+
   Future<void> loadProfessionals() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // Get professionals
       final contractors = await _projectService.getContractors();
       final architects = await _projectService.getArchitects();
       _professionals = [...contractors, ...architects];
 
       print("Professionals loaded: ${_professionals.length}");
 
-      // If we have professionals, now fetch and apply reviews
       if (_professionals.isNotEmpty) {
         await _applyReviewsToProfessionals();
-
-        // Sort professionals by rating (highest first)
         _professionals.sort((a, b) => b.rating.compareTo(a.rating));
       }
     } catch (e) {
@@ -320,10 +363,11 @@ class ProjectController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
   Future<void> _applyReviewsToProfessionals() async {
     try {
-      // Get the database reference
-      final DatabaseReference reviewsRef = FirebaseDatabase.instance.ref().child('reviews');
+      final DatabaseReference reviewsRef =
+      FirebaseDatabase.instance.ref().child('reviews/homeowner_reviews');
       print("Fetching reviews from path: ${reviewsRef.path}");
 
       final snapshot = await reviewsRef.get();
@@ -336,16 +380,13 @@ class ProjectController extends ChangeNotifier {
       final reviewsData = Map<String, dynamic>.from(snapshot.value as Map);
       print("Total reviews entries: ${reviewsData.length}");
 
-      // Debug: Print all professional IDs we have
       print("Professional IDs in our list:");
       for (var prof in _professionals) {
         print("Professional ID: ${prof.uid}, Email: ${prof.email}");
       }
 
-      // Create a map to track ratings and counts for each professional
       Map<String, List<double>> professionalRatings = {};
 
-      // Process each review and print what we find
       reviewsData.forEach((reviewId, reviewData) {
         print("Processing review ID: $reviewId");
         if (reviewData is Map) {
@@ -372,7 +413,6 @@ class ProjectController extends ChangeNotifier {
       print("Processed ratings for ${professionalRatings.length} professionals");
       print("Professional IDs with ratings: ${professionalRatings.keys.toList()}");
 
-      // Check if any professionals match our ratings
       bool anyMatches = false;
       for (var prof in _professionals) {
         if (professionalRatings.containsKey(prof.uid)) {
@@ -382,7 +422,6 @@ class ProjectController extends ChangeNotifier {
       }
       print("Any matches between professionals and reviews? $anyMatches");
 
-      // Update each professional with their calculated rating
       for (int i = 0; i < _professionals.length; i++) {
         final professional = _professionals[i];
 
@@ -393,23 +432,29 @@ class ProjectController extends ChangeNotifier {
 
           print("Updating professional ${professional.email}: Rating $averageRating, Reviews ${ratings.length}");
 
-          // Create a new professional with updated rating and review count
           final updatedProfessional = professional.copyWith(
-              rating: averageRating,
-              reviewCount: ratings.length
+            rating: averageRating,
+            reviewCount: ratings.length,
           );
 
-          // Check if the update worked
           print("Before: Rating=${professional.rating}, After: Rating=${updatedProfessional.rating}");
 
-          // Update in the list
           _professionals[i] = updatedProfessional;
+
+          if (professional.role == 'Contractor') {
+            await _database
+                .child('user/contractor/${professional.uid}')
+                .update({'rating': averageRating, 'reviewCount': ratings.length});
+          } else if (professional.role == 'Architect') {
+            await _database
+                .child('user/architect/${professional.uid}')
+                .update({'rating': averageRating, 'reviewCount': ratings.length});
+          }
         } else {
           print("No reviews found for professional ID: ${professional.uid}, Email: ${professional.email}");
         }
       }
 
-      // Verify the updates worked
       print("After updates, professionals with non-zero ratings:");
       for (var prof in _professionals) {
         if (prof.rating > 0) {
@@ -417,37 +462,15 @@ class ProjectController extends ChangeNotifier {
         }
       }
 
-      // Make sure to call notifyListeners() so the UI updates
       notifyListeners();
     } catch (e) {
       print('Error applying reviews to professionals: $e');
-      print(e.toString());
       if (e is Error) {
         print(e.stackTrace);
       }
     }
   }
- /* Future<void> loadProfessionals() async {
-    _isLoading = true;
-    notifyListeners();
 
-    try {
-      final contractors = await _projectService.getContractors();
-      final architects = await _projectService.getArchitects();
-      _professionals = [...contractors, ...architects];
-      print("Professionals retrieved: ${_professionals.length} - List: $_professionals");
-    } catch (e) {
-      _errorMessage = 'Failed to load professionals: $e';
-      print(_errorMessage);
-      _professionals.clear();
-      Get.snackbar('Warning', _errorMessage!,
-          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange);
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-*/
   Future<List<Professional>?> loadProfessionalsForReview(String userId) async {
     _isLoading = true;
     notifyListeners();
@@ -465,18 +488,162 @@ class ProjectController extends ChangeNotifier {
     }
   }
 
+  Future<List<Professional>?> loadUsersForContractorReview(String contractorId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final users = await _projectService.getUsersForContractor(contractorId);
+      print("Users for contractor review retrieved: ${users.length} - List: $users");
+      _users = users;
+      return users;
+    } catch (e) {
+      _errorMessage = 'Failed to load users for contractor review: $e';
+      print(_errorMessage);
+      return [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> saveReview(String projectId, String professionalId, int rating, String review, String professionalRole) async {
     try {
       final user = _auth.currentUser;
       if (user != null) {
         await _projectService.saveReview(projectId, professionalId, user.uid, rating, review, professionalRole);
         await loadProjects();
+        await _applyReviewsToProfessionals();
       }
     } catch (e) {
       _errorMessage = 'Failed to save review: $e';
       print(_errorMessage);
       Get.snackbar('Error', _errorMessage!,
           snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
+    }
+  }
+
+  Future<void> saveContractorReview(String projectId, String contractorId, String reviewedUserId, int rating, String review, String reviewedUserRole) async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _projectService.saveContractorReview(projectId, contractorId, reviewedUserId, user.uid, rating, review, reviewedUserRole);
+        await loadProjects();
+        await _applyContractorReviewsToUsers();
+      }
+    } catch (e) {
+      _errorMessage = 'Failed to save contractor review: $e';
+      print(_errorMessage);
+      Get.snackbar('Error', _errorMessage!,
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
+    }
+  }
+
+  Future<void> _applyContractorReviewsToUsers() async {
+    try {
+      final DatabaseReference reviewsRef =
+      FirebaseDatabase.instance.ref().child('reviews/contractor_reviews');
+      print("Fetching contractor reviews from path: ${reviewsRef.path}");
+
+      final snapshot = await reviewsRef.get();
+      if (!snapshot.exists || snapshot.value == null) {
+        print("No contractor reviews found in database at path: ${reviewsRef.path}");
+        return;
+      }
+
+      print("Contractor reviews snapshot found with value type: ${snapshot.value.runtimeType}");
+      final reviewsData = Map<String, dynamic>.from(snapshot.value as Map);
+      print("Total contractor reviews entries: ${reviewsData.length}");
+
+      print("User IDs in our list:");
+      for (var user in _users) {
+        print("User ID: ${user.uid}, Name: ${user.name}");
+      }
+
+      Map<String, List<double>> userRatings = {};
+
+      reviewsData.forEach((contractorId, contractorReviews) {
+        if (contractorReviews is Map) {
+          final contractorReviewsMap = Map<String, dynamic>.from(contractorReviews);
+          contractorReviewsMap.forEach((reviewId, reviewData) {
+            if (reviewData is Map) {
+              final review = Map<String, dynamic>.from(reviewData);
+              String reviewedUserId = review['reviewedUserId'] ?? '';
+              print("Review for user ID: $reviewedUserId");
+
+              if (reviewedUserId.isNotEmpty && review.containsKey('rating')) {
+                double rating = (review['rating'] as num).toDouble();
+                print("Rating found: $rating");
+
+                if (!userRatings.containsKey(reviewedUserId)) {
+                  userRatings[reviewedUserId] = [];
+                }
+                userRatings[reviewedUserId]!.add(rating);
+              } else {
+                print("Review missing reviewedUserId or rating: $review");
+              }
+            }
+          });
+        }
+      });
+
+      print("Processed ratings for ${userRatings.length} users");
+      print("User IDs with ratings: ${userRatings.keys.toList()}");
+
+      bool anyMatches = false;
+      for (var user in _users) {
+        if (userRatings.containsKey(user.uid)) {
+          anyMatches = true;
+          break;
+        }
+      }
+      print("Any matches between users and reviews? $anyMatches");
+
+      for (int i = 0; i < _users.length; i++) {
+        final user = _users[i];
+
+        if (userRatings.containsKey(user.uid)) {
+          final ratings = userRatings[user.uid]!;
+          final totalRating = ratings.reduce((a, b) => a + b);
+          final averageRating = totalRating / ratings.length;
+
+          print("Updating user ${user.name}: Rating $averageRating, Reviews ${ratings.length}");
+
+          final updatedUser = user.copyWith(
+            rating: averageRating,
+            reviewCount: ratings.length,
+          );
+
+          print("Before: Rating=${user.rating}, After: Rating=${updatedUser.rating}");
+
+          _users[i] = updatedUser;
+
+          if (user.role == 'Homeowner') {
+            await _database
+                .child('user/homeowner/${user.uid}')
+                .update({'rating': averageRating, 'reviewCount': ratings.length});
+          } else if (user.role == 'Vendor') {
+            await _database
+                .child('user/vendor/${user.uid}')
+                .update({'rating': averageRating, 'reviewCount': ratings.length});
+          }
+        } else {
+          print("No reviews found for user ID: ${user.uid}, Name: ${user.name}");
+        }
+      }
+
+      print("After updates, users with non-zero ratings:");
+      for (var user in _users) {
+        if (user.rating > 0) {
+          print("User ${user.name}: Rating ${user.rating}, Reviews ${user.reviewCount}");
+        }
+      }
+
+      notifyListeners();
+    } catch (e) {
+      print('Error applying contractor reviews to users: $e');
+      if (e is Error) {
+        print(e.stackTrace);
+      }
     }
   }
 
@@ -613,5 +780,3 @@ extension ProjectExtension on Project {
     );
   }
 }
-
-

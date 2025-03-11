@@ -1,4 +1,3 @@
-// lib/Models/contractorModel.dart
 import 'package:buildbuddy/Models/Professional.dart';
 
 class Contractor extends Professional {
@@ -45,8 +44,8 @@ class Contractor extends Professional {
     String? phoneNumber,
     double? rating,
     int? reviewCount,
-    String? role, // Required to match Professional.copyWith
-    List<String>? certifications, // Additional parameter for Contractor
+    String? role,
+    List<String>? certifications,
   }) {
     return Contractor(
       uid: uid ?? this.uid,

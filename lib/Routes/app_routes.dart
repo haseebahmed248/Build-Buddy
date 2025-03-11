@@ -337,7 +337,7 @@ class AppRoutes {
     ),
     GetPage(
       name: '/contractor-reviews',
-      page: () => RatingsReviewsScreen(),
+      page: () => ContractorRateReviewDashboard(),
       middlewares: [
         RoleBasedMiddleware(UserRole.contractor),
       ],
@@ -405,6 +405,14 @@ class AppRoutes {
       ],
     ),
     GetPage(
+      name: '/vendor-invoices',
+      page: () => VendorInvoicesScreen(),
+      transition: Transition.fadeIn,
+      middlewares: [
+        RoleBasedMiddleware(UserRole.vendor),
+      ],
+    ),
+    GetPage(
       name: '/vendor-payments',
       page: () => VendorInvoicesScreen(),
       middlewares: [
@@ -427,7 +435,7 @@ class AppRoutes {
     ),
     GetPage(
       name: '/vendor-reviews',
-      page: () => ReviewVendorTasksScreen(),
+      page: () => VendorRateReviewDashboard(),
       middlewares: [
         RoleBasedMiddleware(UserRole.vendor),
       ],

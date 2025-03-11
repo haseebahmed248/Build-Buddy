@@ -1,4 +1,3 @@
-// lib/Models/architectModel.dart
 import 'package:buildbuddy/Models/Professional.dart';
 
 class Architect extends Professional {
@@ -45,8 +44,8 @@ class Architect extends Professional {
     String? phoneNumber,
     double? rating,
     int? reviewCount,
-    String? role, // Required to match Professional.copyWith
-    List<String>? licenses, // Additional parameter for Architect
+    String? role,
+    List<String>? licenses,
   }) {
     return Architect(
       uid: uid ?? this.uid,

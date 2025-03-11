@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:buildbuddy/Controllers/authControllers.dart';
 import 'package:buildbuddy/Models/orderModel.dart';
 import 'package:buildbuddy/Models/messageModel.dart' as bbMessage;
+import 'package:get/get.dart';
 
 class VendorController with ChangeNotifier {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
@@ -117,11 +118,11 @@ class VendorController with ChangeNotifier {
       },
     );
 
-    // Orders Listener with improved debugging
+    // Orders Listener
     _ordersSubscription?.cancel();
     print('Looking for orders with vendorId: ${user.uid}');
 
-    // First, let's check all orders to see if any exist with our vendorId
+    // Debug: Check all orders
     _database.child('orders').get().then((snapshot) {
       print('All orders (debug): ${snapshot.value}');
       if (snapshot.exists) {
@@ -142,19 +143,15 @@ class VendorController with ChangeNotifier {
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            // Filter orders manually to ensure we catch any case sensitivity issues
             final List<Order> filteredOrders = [];
             data.forEach((key, value) {
               final orderData = Map<String, dynamic>.from(value);
               print('Checking order: $key, vendorId: ${orderData['vendorId']}, current user: ${user.uid}');
-
-              // Check both lowercase versions to handle any case sensitivity issues
               if (orderData['vendorId']?.toString().toLowerCase() == user.uid.toLowerCase()) {
                 print('Order matches current vendor: $key');
                 filteredOrders.add(Order.fromMap(orderData, id: key as String));
               }
             });
-
             _orders = filteredOrders;
             print('Orders filtered for vendor - found ${_orders.length} orders: ${_orders.map((o) => o.id).toList()}');
           } else {
@@ -169,7 +166,7 @@ class VendorController with ChangeNotifier {
       },
       onError: (error) {
         print('Error fetching orders at ${DateTime.now()}: $error, Path: orders, UID: ${user.uid}, Stack: ${StackTrace.current}');
-        _orders = []; // Silent failure to prevent UI break
+        _orders = [];
         notifyListeners();
       },
     );
@@ -206,7 +203,7 @@ class VendorController with ChangeNotifier {
           _materials = [];
           print('No materials found for vendorId: ${user.uid} at ${DateTime.now()}');
         }
-        _errorMessage = null; // Clear error on successful fetch
+        _errorMessage = null;
         print('Notifying listeners with ${_materials.length} materials at ${DateTime.now()}');
         notifyListeners();
       },
@@ -255,7 +252,9 @@ class VendorController with ChangeNotifier {
     // Invoices Listener
     _invoicesSubscription?.cancel();
     _invoicesSubscription = _database
-        .child('invoices/${user.uid}')
+        .child('invoices')
+        .orderByChild('vendorId')
+        .equalTo(user.uid)
         .onValue
         .listen(
           (event) {
@@ -267,11 +266,14 @@ class VendorController with ChangeNotifier {
             _invoices = data.entries
                 .map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key)
                 .toList();
+            print('Updated invoices: ${_invoices.map((i) => i['id']).toList()}');
           } else {
             _invoices = [];
+            print('No valid data in invoices snapshot at ${DateTime.now()}');
           }
         } else {
           _invoices = [];
+          print('No invoices found for vendorId: ${user.uid} at ${DateTime.now()}');
         }
         notifyListeners();
       },
@@ -368,7 +370,7 @@ class VendorController with ChangeNotifier {
     notifyListeners();
     try {
       _stopRealTimeListeners();
-      await Future.delayed(Duration(milliseconds: 100)); // Small delay to ensure listeners stop
+      await Future.delayed(Duration(milliseconds: 100));
       _startRealTimeListeners();
       _errorMessage = null;
       print('Refresh completed successfully at ${DateTime.now()}');
@@ -384,14 +386,84 @@ class VendorController with ChangeNotifier {
   Future<void> updateOrderStatus(String orderId, String status) async {
     _isLoading = true;
     notifyListeners();
+    print('Updating order status for orderId: $orderId to status: $status at ${DateTime.now()}');
     try {
-      await _database.child('orders/$orderId/status').set(status);
+      // Fetch the order data to get vendorId, contractorId, and amount
+      final orderRef = _database.child('orders/$orderId');
+      final orderSnapshot = await orderRef.get();
+
+      if (!orderSnapshot.exists) {
+        throw Exception("Order $orderId does not exist");
+      }
+
+      final orderData = Map<String, dynamic>.from(orderSnapshot.value as Map);
+      print('Order data fetched: $orderData');
+
+      final updatedAt = DateTime.now().toIso8601String();
+
+      // Update the order status and updatedAt
+      await orderRef.update({
+        'status': status,
+        'updatedAt': updatedAt,
+      });
+      print('Order $orderId updated to status: $status with updatedAt: $updatedAt');
+
+      // Check if status indicates delivery (case-insensitive)
+      if (status.trim().toLowerCase() == 'delivered') {
+        print('Status is "Delivered", proceeding to create invoice for orderId: $orderId');
+        final vendorId = orderData['vendorId'];
+        final contractorId = orderData['contractorId'];
+        final amount = orderData['amount'];
+        final material = orderData['material'] ?? 'Unknown Material';
+
+        print('Order data - vendorId: $vendorId, contractorId: $contractorId, amount: $amount');
+
+        if (vendorId == null || contractorId == null || amount == null) {
+          throw Exception("Missing required fields in order data: vendorId=$vendorId, contractorId=$contractorId, amount=$amount");
+        }
+
+        // Generate a unique invoice ID and create the invoice under /invoices
+        final invoiceRef = _database.child('invoices').push();
+        final invoiceId = invoiceRef.key;
+
+        if (invoiceId == null) {
+          throw Exception("Failed to generate invoice ID");
+        }
+
+        // Calculate due date (30 days from now)
+        final dueDate = DateTime.now().add(Duration(days: 30)).toIso8601String().split('T')[0];
+        // Generate a simple invoice number (e.g., timestamp-based)
+        final invoiceNumber = 'INV-${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
+
+        final invoiceData = {
+          'invoiceId': invoiceId,
+          'invoiceNumber': invoiceNumber,
+          'vendorId': vendorId,
+          'contractorId': contractorId,
+          'amount': amount,
+          'status': 'Pending',
+          'date': updatedAt.split('T')[0], // Invoice creation date
+          'dueDate': dueDate,
+          'paymentTerms': 'Net 30',
+          'description': 'Invoice for delivery of $material (Order #$orderId)',
+          'orderId': orderId,
+        };
+
+        print('Attempting to set invoice data: $invoiceData');
+        await invoiceRef.set(invoiceData);
+        print("Invoice with ID $invoiceId created at ${DateTime.now()}");
+      } else {
+        print('Status $status is not "Delivered", skipping invoice creation');
+      }
+
       _errorMessage = null;
       await refreshData(); // Refresh data after update
-      print('Order status updated successfully: $orderId at ${DateTime.now()}');
+      print('Order status update completed successfully for $orderId at ${DateTime.now()}');
     } catch (e) {
       _errorMessage = 'Failed to update order status: $e';
-      print('Update order status error at ${DateTime.now()}: $_errorMessage');
+      print('Update order status error at ${DateTime.now()}: $_errorMessage, Stack: ${StackTrace.current}');
+      Get.snackbar('Error', 'Failed to update order: $e',
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -411,12 +483,12 @@ class VendorController with ChangeNotifier {
       final newRef = _database.child('materials').push();
       await newRef.set({
         ...product,
-        'vendorId': vendorId, // Ensure vendorId is included
-        'date': DateTime.now().toIso8601String(), // Add date if not provided
+        'vendorId': vendorId,
+        'date': DateTime.now().toIso8601String(),
       });
       print('Product added successfully: ${product.toString()} with vendorId: $vendorId at ${DateTime.now()}');
       _errorMessage = null;
-      await refreshData(); // Refresh data after adding
+      await refreshData();
     } catch (e) {
       _errorMessage = 'Failed to add product: $e';
       print('Add product error at ${DateTime.now()}: $_errorMessage');
@@ -434,7 +506,7 @@ class VendorController with ChangeNotifier {
       await _database.child('materials/$materialId').update(updates);
       print('Product updated successfully: $materialId at ${DateTime.now()}');
       _errorMessage = null;
-      await refreshData(); // Refresh data after update
+      await refreshData();
     } catch (e) {
       _errorMessage = 'Failed to update product: $e';
       print('Update product error at ${DateTime.now()}: $_errorMessage');
@@ -452,7 +524,7 @@ class VendorController with ChangeNotifier {
       await _database.child('materials/$materialId').remove();
       print('Product deleted successfully: $materialId at ${DateTime.now()}');
       _errorMessage = null;
-      await refreshData(); // Refresh data after delete
+      await refreshData();
     } catch (e) {
       _errorMessage = 'Failed to delete product: $e';
       print('Delete product error at ${DateTime.now()}: $_errorMessage');
@@ -466,21 +538,55 @@ class VendorController with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final invoiceId = _database.child('invoices/${_auth.currentUser!.uid}').push().key;
-      if (invoiceId != null) {
-        await _database.child('invoices/${_auth.currentUser!.uid}/$invoiceId').set({
-          'orderId': orderId,
-          'amount': amount,
-          'status': 'Pending',
-          'createdAt': DateTime.now().toIso8601String(),
-        });
-        print('Invoice generated successfully: $invoiceId at ${DateTime.now()}');
-        _errorMessage = null;
-        await refreshData(); // Refresh data after generating invoice
-      } else {
-        _errorMessage = 'Failed to generate invoice ID';
-        print('Error at ${DateTime.now()}: $_errorMessage');
+      final user = _auth.currentUser;
+      if (user == null) throw 'User not authenticated';
+
+      // Fetch the order to get contractorId
+      final orderRef = _database.child('orders/$orderId');
+      final orderSnapshot = await orderRef.get();
+
+      if (!orderSnapshot.exists) {
+        throw Exception("Order $orderId does not exist");
       }
+
+      final orderData = Map<String, dynamic>.from(orderSnapshot.value as Map);
+      final contractorId = orderData['contractorId'];
+      final material = orderData['material'] ?? 'Unknown Material';
+
+      if (contractorId == null) {
+        throw Exception("Contractor ID missing in order data");
+      }
+
+      // Generate a unique invoice ID under /invoices
+      final invoiceRef = _database.child('invoices').push();
+      final invoiceId = invoiceRef.key;
+
+      if (invoiceId == null) {
+        throw Exception("Failed to generate invoice ID");
+      }
+
+      // Calculate due date (30 days from now)
+      final dueDate = DateTime.now().add(Duration(days: 30)).toIso8601String().split('T')[0];
+      // Generate a simple invoice number (e.g., timestamp-based)
+      final invoiceNumber = 'INV-${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
+
+      await invoiceRef.set({
+        'invoiceId': invoiceId,
+        'invoiceNumber': invoiceNumber,
+        'vendorId': user.uid,
+        'contractorId': contractorId,
+        'orderId': orderId,
+        'amount': amount,
+        'status': 'Pending',
+        'date': DateTime.now().toIso8601String().split('T')[0],
+        'dueDate': dueDate,
+        'paymentTerms': 'Net 30',
+        'description': 'Invoice for delivery of $material (Order #$orderId)',
+      });
+
+      print('Invoice generated successfully: $invoiceId at ${DateTime.now()}');
+      _errorMessage = null;
+      await refreshData();
     } catch (e) {
       _errorMessage = 'Failed to generate invoice: $e';
       print('Generate invoice error at ${DateTime.now()}: $_errorMessage');
@@ -495,11 +601,11 @@ class VendorController with ChangeNotifier {
     notifyListeners();
     try {
       await _database
-          .child('invoices/${_auth.currentUser!.uid}/$invoiceId/status')
+          .child('invoices/$invoiceId/status')
           .set('Paid');
       print('Payment confirmed for invoice: $invoiceId at ${DateTime.now()}');
       _errorMessage = null;
-      await refreshData(); // Refresh data after confirming payment
+      await refreshData();
     } catch (e) {
       _errorMessage = 'Failed to confirm payment: $e';
       print('Confirm payment error at ${DateTime.now()}: $_errorMessage');
@@ -516,7 +622,7 @@ class VendorController with ChangeNotifier {
       await _database.child('notifications/${_auth.currentUser!.uid}').remove();
       print('Notifications cleared successfully at ${DateTime.now()}');
       _errorMessage = null;
-      await refreshData(); // Refresh data after clearing notifications
+      await refreshData();
     } catch (e) {
       _errorMessage = 'Failed to clear notifications: $e';
       print('Clear notifications error at ${DateTime.now()}: $_errorMessage');
