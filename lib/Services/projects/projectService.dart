@@ -202,6 +202,38 @@ class ProjectService {
     }
   }
 
+/////
+  Future<Map<String, List<Map<String, dynamic>>>> getAllReviews() async {
+    try {
+      final snapshot = await _database.child('reviews').get();
+      if (snapshot.exists && snapshot.value != null) {
+        final data = Map<String, dynamic>.from(snapshot.value as Map);
+        Map<String, List<Map<String, dynamic>>> professionalReviews = {};
+
+        data.forEach((reviewId, reviewData) {
+          if (reviewData is Map) {
+            final review = Map<String, dynamic>.from(reviewData);
+            String professionalId = review['professionalId'] ?? '';
+
+            if (professionalId.isNotEmpty) {
+              if (!professionalReviews.containsKey(professionalId)) {
+                professionalReviews[professionalId] = [];
+              }
+              review['id'] = reviewId; // Store the review ID as well
+              professionalReviews[professionalId]!.add(review);
+            }
+          }
+        });
+
+        return professionalReviews;
+      }
+      return {};
+    } catch (e) {
+      print('Error fetching reviews: $e');
+      throw Exception('Failed to fetch reviews: $e');
+    }
+  }
+///////////
   Future<void> createProject(Project project) async {
     try {
       await _database.child('projects/${project.id}').set(project.toMap());

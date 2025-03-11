@@ -10,6 +10,7 @@ import 'package:buildbuddy/Controllers/adminController.dart' as admin;
 import 'package:buildbuddy/Controllers/projectController.dart';
 import 'package:buildbuddy/Controllers/vendorController.dart';
 import 'package:buildbuddy/Controllers/contractorController.dart';
+import 'package:buildbuddy/Controllers/consultation_controller.dart'; // Import ConsultationController
 import 'package:buildbuddy/Models/userModels.dart';
 import 'package:buildbuddy/firebase_options.dart';
 
@@ -64,6 +65,9 @@ void main() async {
             return null;
           },
           dispose: (_, controller) => controller?.dispose(),
+        ),
+        ChangeNotifierProvider<ConsultationController>(
+          create: (_) => ConsultationController(), // Add ConsultationController
         ),
       ],
       child: MyApp(authController: authController),
@@ -123,8 +127,6 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
-
-
 
 
 

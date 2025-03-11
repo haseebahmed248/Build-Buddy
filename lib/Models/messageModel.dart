@@ -1,7 +1,5 @@
 import 'package:firebase_database/firebase_database.dart';
 
-/// Represents a message in the chat system, used for Homeowner-Contractor interactions.
-/// Aligns with SRS 3.2.2 (Usability) and 3.2.3 (Security).
 class Message {
   final String id;
   final String senderId;

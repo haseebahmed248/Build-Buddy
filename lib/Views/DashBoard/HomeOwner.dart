@@ -408,6 +408,12 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
         'color': const Color(0xFF9C27B0),
         'route': '/rate-review'
       },
+      {
+        'title': 'My Consultations',
+        'icon': Icons.calendar_today,
+        'color': const Color(0xFF2196F3),
+        'route': '/homeowner-consultations' // New route
+      },
      /* {
         'title': 'Support',
         'icon': Icons.help_outline,

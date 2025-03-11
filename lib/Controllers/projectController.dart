@@ -342,6 +342,39 @@ class ProjectController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Get professionals
+      final contractors = await _projectService.getContractors();
+      final architects = await _projectService.getArchitects();
+      _professionals = [...contractors, ...architects];
+      print("Professionals retrieved: ${_professionals.length} - List: $_professionals");
+
+      print("Professionals loaded: ${_professionals.length}");
+
+      // If we have professionals, now fetch and apply reviews
+      if (_professionals.isNotEmpty) {
+        await _applyReviewsToProfessionals();
+
+        // Sort professionals by rating (highest first)
+        _professionals.sort((a, b) => b.rating.compareTo(a.rating));
+      }
+    } catch (e) {
+      _errorMessage = 'Failed to load professionals: $e';
+      print(_errorMessage);
+      _professionals.clear();
+      Get.snackbar('Warning', _errorMessage!,
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+/*
+  Future<void> loadProfessionals() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
       final contractors = await _projectService.getContractors();
       final architects = await _projectService.getArchitects();
       _professionals = [...contractors, ...architects];
@@ -362,7 +395,8 @@ class ProjectController extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
+  }*/
+/*
 
   Future<void> _applyReviewsToProfessionals() async {
     try {
@@ -470,6 +504,116 @@ class ProjectController extends ChangeNotifier {
       }
     }
   }
+*/
+  Future<void> _applyReviewsToProfessionals() async {
+    try {
+      // Get the database reference
+      final DatabaseReference reviewsRef = FirebaseDatabase.instance.ref().child('reviews');
+      print("Fetching reviews from path: ${reviewsRef.path}");
+
+      final snapshot = await reviewsRef.get();
+      if (!snapshot.exists || snapshot.value == null) {
+        print("No reviews found in database at path: ${reviewsRef.path}");
+        return;
+      }
+
+      print("Reviews snapshot found with value type: ${snapshot.value.runtimeType}");
+      final reviewsData = Map<String, dynamic>.from(snapshot.value as Map);
+      print("Total reviews entries: ${reviewsData.length}");
+
+      // Debug: Print all professional IDs we have
+      print("Professional IDs in our list:");
+      for (var prof in _professionals) {
+        print("Professional ID: ${prof.uid}, Email: ${prof.email}");
+      }
+
+      // Create a map to track ratings and counts for each professional
+      Map<String, List<double>> professionalRatings = {};
+
+      // Process each review and print what we find
+      reviewsData.forEach((reviewId, reviewData) {
+        print("Processing review ID: $reviewId");
+        if (reviewData is Map) {
+          final review = Map<String, dynamic>.from(reviewData);
+          String professionalId = review['professionalId'] ?? '';
+          print("Review for professional ID: $professionalId");
+
+          if (professionalId.isNotEmpty && review.containsKey('rating')) {
+            double rating = (review['rating'] as num).toDouble();
+            print("Rating found: $rating");
+
+            if (!professionalRatings.containsKey(professionalId)) {
+              professionalRatings[professionalId] = [];
+            }
+            professionalRatings[professionalId]!.add(rating);
+          } else {
+            print("Review missing professionalId or rating: $review");
+          }
+        } else {
+          print("Review data is not a Map: $reviewData");
+        }
+      });
+
+      print("Processed ratings for ${professionalRatings.length} professionals");
+      print("Professional IDs with ratings: ${professionalRatings.keys.toList()}");
+
+      // Check if any professionals match our ratings
+      bool anyMatches = false;
+      for (var prof in _professionals) {
+        if (professionalRatings.containsKey(prof.uid)) {
+          anyMatches = true;
+          break;
+        }
+      }
+      print("Any matches between professionals and reviews? $anyMatches");
+
+      // Update each professional with their calculated rating
+      for (int i = 0; i < _professionals.length; i++) {
+        final professional = _professionals[i];
+
+        if (professionalRatings.containsKey(professional.uid)) {
+          final ratings = professionalRatings[professional.uid]!;
+          final totalRating = ratings.reduce((a, b) => a + b);
+          final averageRating = totalRating / ratings.length;
+
+          print("Updating professional ${professional.email}: Rating $averageRating, Reviews ${ratings.length}");
+
+          // Create a new professional with updated rating and review count
+          final updatedProfessional = professional.copyWith(
+              rating: averageRating,
+              reviewCount: ratings.length
+          );
+
+          // Check if the update worked
+          print("Before: Rating=${professional.rating}, After: Rating=${updatedProfessional.rating}");
+
+          // Update in the list
+          _professionals[i] = updatedProfessional;
+        } else {
+          print("No reviews found for professional ID: ${professional.uid}, Email: ${professional.email}");
+        }
+      }
+
+      // Verify the updates worked
+      print("After updates, professionals with non-zero ratings:");
+      for (var prof in _professionals) {
+        if (prof.rating > 0) {
+          print("Professional ${prof.email}: Rating ${prof.rating}, Reviews ${prof.reviewCount}");
+        }
+      }
+
+      // Make sure to call notifyListeners() so the UI updates
+      notifyListeners();
+    } catch (e) {
+      print('Error applying reviews to professionals: $e');
+      print(e.toString());
+      if (e is Error) {
+        print(e.stackTrace);
+      }
+    }
+  }
+
+
 
   Future<List<Professional>?> loadProfessionalsForReview(String userId) async {
     _isLoading = true;

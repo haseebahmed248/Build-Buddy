@@ -1,87 +1,146 @@
+import 'package:buildbuddy/Controllers/consultation_controller.dart';
+import 'package:buildbuddy/Models/consultation_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
-class ConsultHomeownersController extends GetxController {
-  final DatabaseReference _database = FirebaseDatabase.instance.ref();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  final consultations = <Map<String, dynamic>>[].obs;
-  final isLoading = true.obs;
+class ConsultArchitectScreen extends StatefulWidget {
+  const ConsultArchitectScreen({Key? key}) : super(key: key);
 
   @override
-  void onInit() {
-    super.onInit();
-    fetchConsultations();
-  }
-
-  void fetchConsultations() async {
-    try {
-      isLoading.value = true;
-      final architectUid = _auth.currentUser?.uid;
-      if (architectUid == null) {
-        Get.snackbar('Error', 'User not authenticated');
-        return;
-      }
-
-      final consultationsRef = _database.child('consultations/$architectUid');
-      consultationsRef.onValue.listen((event) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>?;
-        if (data != null) {
-          final consultationList = <Map<String, dynamic>>[];
-          data.forEach((key, value) {
-            final consultation = Map<String, dynamic>.from(value);
-            consultation['id'] = key;
-            consultationList.add(consultation);
-          });
-          consultations.assignAll(consultationList);
-        } else {
-          consultations.clear();
-        }
-        isLoading.value = false;
-      });
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to fetch consultations: $e');
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> addConsultation(Map<String, dynamic> consultation) async {
-    try {
-      final architectUid = _auth.currentUser?.uid;
-      if (architectUid == null) return;
-
-      final ref = _database.child('consultations/$architectUid').push();
-      await ref.set(consultation);
-      Get.snackbar('Success', 'Consultation scheduled successfully');
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to schedule consultation: $e');
-    }
-  }
+  _ConsultArchitectScreenState createState() => _ConsultArchitectScreenState();
 }
 
-class ConsultHomeownersScreen extends StatefulWidget {
-  const ConsultHomeownersScreen({Key? key}) : super(key: key);
-
-  @override
-  _ConsultHomeownersScreenState createState() => _ConsultHomeownersScreenState();
-}
-
-class _ConsultHomeownersScreenState extends State<ConsultHomeownersScreen> {
-  final ConsultHomeownersController _controller = Get.put(ConsultHomeownersController());
+class _ConsultArchitectScreenState extends State<ConsultArchitectScreen> {
   String? _selectedFilter;
+  bool _isScheduling = false;
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _projectTitleController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+  DateTime? _selectedDate;
+  String? _selectedProjectId;
+  List<Map<String, dynamic>> _projects = [];
+
+  @override
+  void initState() {
+    super.initState();
+    final controller = Provider.of<ConsultationController>(context, listen: false);
+    controller.loadConsultations(isArchitect: true);
+    _loadProjects();
+  }
+
+  Future<void> _loadProjects() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final ref = FirebaseDatabase.instance.ref('projects');
+    final snapshot = await ref.orderByChild('assignedArchitectId').equalTo(user.uid).get();
+    final data = snapshot.value as Map<dynamic, dynamic>?;
+
+    if (data != null) {
+      _projects = data.entries.map((entry) {
+        final projectData = Map<String, dynamic>.from(entry.value);
+        projectData['id'] = entry.key;
+        return projectData;
+      }).toList();
+      setState(() {});
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1E3799),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _dateController.text = "${picked.day}/${picked.month}/${picked.year}";
+      });
+    }
+  }
+
+  void _submitForm() async {
+    if (_formKey.currentState!.validate() && _selectedProjectId != null && _selectedDate != null) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final selectedProject = _projects.firstWhere((p) => p['id'] == _selectedProjectId);
+      final consultation = Consultation(
+        id: '',
+        homeownerId: selectedProject['userId'],
+        architectId: user.uid,
+        projectId: _selectedProjectId!,
+        projectTitle: _projectTitleController.text,
+        date: _selectedDate!,
+        status: 'Scheduled',
+        notes: _notesController.text,
+      );
+
+      final controller = Provider.of<ConsultationController>(context, listen: false);
+      await controller.scheduleConsultation(consultation);
+
+      if (controller.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(controller.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Consultation scheduled successfully!'),
+            backgroundColor: const Color(0xFF1E3799),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+        setState(() {
+          _isScheduling = false;
+          _formKey.currentState!.reset();
+          _projectTitleController.clear();
+          _dateController.clear();
+          _notesController.clear();
+          _selectedProjectId = null;
+          _selectedDate = null;
+        });
+        controller.loadConsultations(isArchitect: true); // Refresh the list
+      }
+    }
+  }
 
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Scheduled':
-        return const Color(0xFF2ECC71); // Green
+        return const Color(0xFF2ECC71);
       case 'Pending':
-        return const Color(0xFF3498DB); // Blue
+        return const Color(0xFF3498DB);
       case 'Confirmed':
-        return const Color(0xFFE67E22); // Orange
+        return const Color(0xFFE67E22);
       default:
-        return const Color(0xFF95A5A6); // Gray
+        return const Color(0xFF95A5A6);
     }
   }
 
@@ -91,488 +150,6 @@ class _ConsultHomeownersScreenState extends State<ConsultHomeownersScreen> {
       builder: (context) {
         return AlertDialog(
           title: const Text('Filter Consultations'),
-          content: DropdownButtonFormField<String>(
-            value: _selectedFilter,
-            decoration: const InputDecoration(
-              labelText: 'Filter by Status',
-              border: OutlineInputBorder(),
-            ),
-            items: ['All', 'Scheduled', 'Pending', 'Confirmed']
-                .map((status) => DropdownMenuItem(value: status, child: Text(status)))
-                .toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedFilter = value;
-              });
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  if (_selectedFilter == 'All' || _selectedFilter == null) {
-                    _controller.consultations.refresh();
-                  } else {
-                    _controller.consultations.value = _controller.consultations
-                        .where((consultation) => consultation['status'] == _selectedFilter)
-                        .toList();
-                  }
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Apply'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120),
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF1E3799), Color(0xFF4834DF)],
-            ),
-            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 2))],
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)),
-                                  child: const Icon(Icons.person_outline, color: Colors.white, size: 28),
-                                ),
-                                const SizedBox(width: 12),
-                                const Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Consultations', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                                    Text('Manage Homeowner Meetings', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            IconButton(icon: const Icon(Icons.filter_list, color: Colors.white), onPressed: _showFilterDialog),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      backgroundColor: const Color(0xFFF5F6FA),
-      body: Stack(
-        children: [
-          Positioned(top: -100, right: -50, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF4834DF).withOpacity(0.1)))),
-          Positioned(bottom: -80, left: -60, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF1E3799).withOpacity(0.1)))),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Obx(() {
-              if (_controller.isLoading.value) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final filteredConsultations = _selectedFilter == 'All' || _selectedFilter == null
-                  ? _controller.consultations
-                  : _controller.consultations.where((c) => c['status'] == _selectedFilter).toList();
-              return ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                itemCount: filteredConsultations.length,
-                itemBuilder: (context, index) {
-                  final consultation = filteredConsultations[index];
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => _showConsultationDetails(context, consultation),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: _getStatusColor(consultation['status']).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  child: Icon(Icons.meeting_room, color: _getStatusColor(consultation['status']), size: 24),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(consultation['homeownerName'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E3799))),
-                                      const SizedBox(height: 4),
-                                      Text(consultation['projectTitle'], style: TextStyle(color: Colors.grey[600], fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                        decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
-                                        child: Text('${consultation['date']} ${consultation['time']}', style: TextStyle(color: Colors.grey[700], fontSize: 12, fontWeight: FontWeight.w500)),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: _getStatusColor(consultation['status']).withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(consultation['status'], style: TextStyle(color: _getStatusColor(consultation['status']), fontSize: 12, fontWeight: FontWeight.bold)),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    IconButton(
-                                      icon: Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 20),
-                                      onPressed: () => _showConsultationDetails(context, consultation),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            }),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ScheduleConsultationScreen())),
-        icon: const Icon(Icons.add),
-        label: const Text('New Consultation'),
-        backgroundColor: const Color(0xFF1E3799),
-      ),
-    );
-  }
-
-  void _showConsultationDetails(BuildContext context, Map<String, dynamic> consultation) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: _getStatusColor(consultation['status']).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-              child: Icon(Icons.meeting_room, color: _getStatusColor(consultation['status'])),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Text(consultation['homeownerName'], style: const TextStyle(color: Color(0xFF1E3799), fontWeight: FontWeight.bold))),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Project: ${consultation['projectTitle']}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700])),
-            const SizedBox(height: 8),
-            Text('Date: ${consultation['date']} at ${consultation['time']}', style: TextStyle(color: Colors.grey[600])),
-            const SizedBox(height: 8),
-            Text('Notes: ${consultation['notes'] ?? 'None'}', style: TextStyle(color: Colors.grey[600])),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(color: _getStatusColor(consultation['status']).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-              child: Text(consultation['status'], style: TextStyle(color: _getStatusColor(consultation['status']), fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close', style: TextStyle(color: Color(0xFF4834DF))))],
-      ),
-    );
-  }
-}
-
-class ScheduleConsultationScreen extends StatefulWidget {
-  @override
-  _ScheduleConsultationScreenState createState() => _ScheduleConsultationScreenState();
-}
-
-class _ScheduleConsultationScreenState extends State<ScheduleConsultationScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _homeownerController = TextEditingController();
-  final _projectController = TextEditingController();
-  final _dateController = TextEditingController();
-  final _timeController = TextEditingController();
-  final _notesController = TextEditingController();
-  DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
-  final ConsultHomeownersController _controller = Get.find();
-
-  Future<void> _selectDate(BuildContext context) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) => Theme(data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF1E3799), onPrimary: Colors.white, surface: Colors.white, onSurface: Colors.black)), child: child!),
-    );
-    if (picked != null) setState(() => {_selectedDate = picked, _dateController.text = "${picked.day}/${picked.month}/${picked.year}"});
-  }
-
-  Future<void> _selectTime(BuildContext context) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) => Theme(data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF1E3799), onPrimary: Colors.white, surface: Colors.white, onSurface: Colors.black)), child: child!),
-    );
-    if (picked != null) setState(() => {_selectedTime = picked, _timeController.text = picked.format(context)});
-  }
-
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      final consultation = {
-        'homeownerName': _homeownerController.text,
-        'projectTitle': _projectController.text,
-        'date': _dateController.text,
-        'time': _timeController.text,
-        'status': 'Pending',
-        'notes': _notesController.text,
-        'homeownerId': 'temp_homeowner_id', // Replace with actual logic to fetch homeowner ID
-        'projectId': 'temp_project_id',     // Replace with actual project ID
-      };
-      _controller.addConsultation(consultation);
-      Navigator.pop(context);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120),
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E3799), Color(0xFF4834DF)]),
-            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 2))],
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    children: [
-                      IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22), onPressed: () => Navigator.pop(context)),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.schedule, color: Colors.white, size: 28)),
-                            const SizedBox(width: 12),
-                            const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('Schedule Consultation', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                              Text('Book a meeting with homeowner', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                            ]),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      body: Stack(
-        children: [
-          Positioned(top: -100, right: -50, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF4834DF).withOpacity(0.1)))),
-          Positioned(bottom: -80, left: -60, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF1E3799).withOpacity(0.1)))),
-          SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  _buildFormField(controller: _homeownerController, label: 'Homeowner Name', icon: Icons.person, validator: (value) => value!.isEmpty ? 'Please enter homeowner name' : null),
-                  const SizedBox(height: 16),
-                  _buildFormField(controller: _projectController, label: 'Project Description', icon: Icons.work, validator: (value) => value!.isEmpty ? 'Please enter project description' : null),
-                  const SizedBox(height: 16),
-                  _buildFormField(controller: _dateController, label: 'Date', icon: Icons.calendar_today, readOnly: true, onTap: () => _selectDate(context), validator: (value) => value!.isEmpty ? 'Please select a date' : null),
-                  const SizedBox(height: 16),
-                  _buildFormField(controller: _timeController, label: 'Time', icon: Icons.access_time, readOnly: true, onTap: () => _selectTime(context), validator: (value) => value!.isEmpty ? 'Please select a time' : null),
-                  const SizedBox(height: 16),
-                  _buildFormField(controller: _notesController, label: 'Additional Notes', icon: Icons.notes, maxLines: 3),
-                  const SizedBox(height: 32),
-                  Container(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3799), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), elevation: 5),
-                      child: const Text('Schedule Consultation', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFormField({required TextEditingController controller, required String label, required IconData icon, String? Function(String?)? validator, bool readOnly = false, VoidCallback? onTap, int maxLines = 1}) {
-    return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
-      child: TextFormField(
-        controller: controller,
-        validator: validator,
-        readOnly: readOnly,
-        onTap: onTap,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: const Color(0xFF1E3799)),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: maxLines > 1 ? 20 : 0),
-        ),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _homeownerController.dispose();
-    _projectController.dispose();
-    _dateController.dispose();
-    _timeController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-//////////////////
-/////////UI//////////
-
-/*
-import 'package:flutter/material.dart';
-
-class ConsultHomeownersScreen extends StatefulWidget {
-  const ConsultHomeownersScreen({Key? key}) : super(key: key);
-
-  @override
-  _ConsultHomeownersScreenState createState() => _ConsultHomeownersScreenState();
-}
-
-class _ConsultHomeownersScreenState extends State<ConsultHomeownersScreen> {
-  // Dummy data to simulate consultations
-  final List<Map<String, dynamic>> _allConsultations = [
-    {
-      'homeowner': 'John Doe',
-      'project': 'Kitchen Remodel',
-      'date': 'December 15, 2024',
-      'status': 'Scheduled',
-      'icon': Icons.kitchen,
-    },
-    {
-      'homeowner': 'Jane Smith',
-      'project': 'Bathroom Renovation',
-      'date': 'December 18, 2024',
-      'status': 'Pending',
-      'icon': Icons.bathroom,
-    },
-    {
-      'homeowner': 'Sam Wilson',
-      'project': 'Living Room Overhaul',
-      'date': 'December 20, 2024',
-      'status': 'Confirmed',
-      'icon': Icons.living,
-    },
-  ];
-
-  List<Map<String, dynamic>> _filteredConsultations = [];
-  String? _selectedFilter;
-
-  @override
-  void initState() {
-    super.initState();
-    _filteredConsultations = List.from(_allConsultations);
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Scheduled':
-        return Color(0xFF2ECC71); // Green
-      case 'Pending':
-        return Color(0xFF3498DB); // Blue
-      case 'Confirmed':
-        return Color(0xFFE67E22); // Orange
-      default:
-        return Color(0xFF95A5A6); // Gray
-    }
-  }
-
-  void _showFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Filter Consultations'),
           content: DropdownButtonFormField<String>(
             value: _selectedFilter,
             decoration: const InputDecoration(
@@ -594,23 +171,13 @@ class _ConsultHomeownersScreenState extends State<ConsultHomeownersScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                setState(() {
-                  if (_selectedFilter == 'All' || _selectedFilter == null) {
-                    _filteredConsultations = List.from(_allConsultations);
-                  } else {
-                    _filteredConsultations = _allConsultations
-                        .where((consultation) =>
-                    consultation['status'] == _selectedFilter)
-                        .toList();
-                  }
-                });
                 Navigator.pop(context);
               },
-              child: Text('Apply'),
+              child: const Text('Apply'),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
           ],
         );
@@ -618,283 +185,7 @@ class _ConsultHomeownersScreenState extends State<ConsultHomeownersScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(120),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF1E3799), // Deep Blue
-                Color(0xFF4834DF), // Royal Blue
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 10,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white24,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    Icons.person_outline,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                ),
-                                SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Consultations',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Manage Homeowner Meetings',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.filter_list, color: Colors.white),
-                              onPressed: _showFilterDialog,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      backgroundColor: Color(0xFFF5F6FA),
-      body: Stack(
-        children: [
-          Positioned(
-            top: -100,
-            right: -50,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF4834DF).withOpacity(0.1),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -80,
-            left: -60,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF1E3799).withOpacity(0.1),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ListView.builder(
-              physics: BouncingScrollPhysics(),
-              itemCount: _filteredConsultations.length,
-              itemBuilder: (context, index) {
-                final consultation = _filteredConsultations[index];
-                return AnimatedContainer(
-                  duration: Duration(milliseconds: 300),
-                  margin: EdgeInsets.only(bottom: 16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: () =>
-                            _showConsultationDetails(context, consultation),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(consultation['status'])
-                                      .withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                child: Icon(
-                                  consultation['icon'],
-                                  color: _getStatusColor(consultation['status']),
-                                  size: 24,
-                                ),
-                              ),
-                              SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      consultation['homeowner'],
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Color(0xFF1E3799),
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      consultation['project'],
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    SizedBox(height: 8),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[200],
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        consultation['date'],
-                                        style: TextStyle(
-                                          color: Colors.grey[700],
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _getStatusColor(
-                                          consultation['status'])
-                                          .withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      consultation['status'],
-                                      style: TextStyle(
-                                        color: _getStatusColor(
-                                            consultation['status']),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.arrow_forward_ios,
-                                      color: Colors.grey[400],
-                                      size: 20,
-                                    ),
-                                    onPressed: () => _showConsultationDetails(
-                                        context, consultation),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => ScheduleConsultationScreen()),
-          );
-        },
-        icon: Icon(Icons.add),
-        label: Text('New Consultation'),
-        backgroundColor: Color(0xFF1E3799),
-      ),
-    );
-  }
-
-  void _showConsultationDetails(
-      BuildContext context, Map<String, dynamic> consultation) {
+  void _showConsultationDetails(BuildContext context, Consultation consultation) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -905,22 +196,21 @@ class _ConsultHomeownersScreenState extends State<ConsultHomeownersScreen> {
           title: Row(
             children: [
               Container(
-                padding: EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color:
-                  _getStatusColor(consultation['status']).withOpacity(0.1),
+                  color: _getStatusColor(consultation.status).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  consultation['icon'],
-                  color: _getStatusColor(consultation['status']),
+                  Icons.person_outline,
+                  color: _getStatusColor(consultation.status),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  consultation['homeowner'],
-                  style: TextStyle(
+                  'Homeowner ID: ${consultation.homeownerId}',
+                  style: const TextStyle(
                     color: Color(0xFF1E3799),
                     fontWeight: FontWeight.bold,
                   ),
@@ -933,39 +223,43 @@ class _ConsultHomeownersScreenState extends State<ConsultHomeownersScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Project: ${consultation['project']}',
+                'Project: ${consultation.projectTitle}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.grey[700],
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
-                'Date: ${consultation['date']}',
+                'Date: ${DateFormat('yyyy-MM-dd HH:mm').format(consultation.date)}',
                 style: TextStyle(color: Colors.grey[600]),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(consultation['status'])
-                      .withOpacity(0.1),
+                  color: _getStatusColor(consultation.status).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  consultation['status'],
+                  consultation.status,
                   style: TextStyle(
-                    color: _getStatusColor(consultation['status']),
+                    color: _getStatusColor(consultation.status),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Notes: ${consultation.notes}',
+                style: TextStyle(color: Colors.grey[600]),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(
+              child: const Text(
                 'Close',
                 style: TextStyle(color: Color(0xFF4834DF)),
               ),
@@ -975,109 +269,59 @@ class _ConsultHomeownersScreenState extends State<ConsultHomeownersScreen> {
       },
     );
   }
-}
 
-///
-class ScheduleConsultationScreen extends StatefulWidget {
-  @override
-  _ScheduleConsultationScreenState createState() =>
-      _ScheduleConsultationScreenState();
-}
-
-class _ScheduleConsultationScreenState extends State<ScheduleConsultationScreen> {
-  final _formKey = GlobalKey<FormState>();
-
-  // Controllers for form input
-  final TextEditingController _homeownerController = TextEditingController();
-  final TextEditingController _projectController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _timeController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
-
-  DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Color(0xFF1E3799),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? Function(String?)? validator,
+    bool readOnly = false,
+    VoidCallback? onTap,
+    int maxLines = 1,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-        _dateController.text = "${picked.day}/${picked.month}/${picked.year}";
-      });
-    }
-  }
-
-  Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Color(0xFF1E3799),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        validator: validator,
+        readOnly: readOnly,
+        onTap: onTap,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: const Color(0xFF1E3799)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide.none,
           ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _selectedTime = picked;
-        _timeController.text = picked.format(context);
-      });
-    }
-  }
-
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      // Here you would typically save the consultation data
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Consultation scheduled successfully!'),
-          backgroundColor: Color(0xFF1E3799),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: maxLines > 1 ? 20 : 0,
           ),
         ),
-      );
-      Navigator.pop(context);
-    }
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF5F6FA),
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(120),
+        preferredSize: const Size.fromHeight(120),
         child: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -1103,7 +347,7 @@ class _ScheduleConsultationScreenState extends State<ScheduleConsultationScreen>
                   child: Row(
                     children: [
                       IconButton(
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.arrow_back_ios_new,
                           color: Colors.white,
                           size: 22,
@@ -1112,39 +356,48 @@ class _ScheduleConsultationScreenState extends State<ScheduleConsultationScreen>
                       ),
                       Expanded(
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Container(
-                              padding: EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white24,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.schedule,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
                               children: [
-                                Text(
-                                  'Schedule Consultation',
-                                  style: TextStyle(
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white24,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.person_outline,
                                     color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
+                                    size: 28,
                                   ),
                                 ),
-                                Text(
-                                  'Book a meeting with homeowner',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14,
-                                  ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Consultations',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Total: ${Provider.of<ConsultationController>(context).consultations.length}',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.filter_list, color: Colors.white),
+                              onPressed: _showFilterDialog,
                             ),
                           ],
                         ),
@@ -1157,6 +410,7 @@ class _ScheduleConsultationScreenState extends State<ScheduleConsultationScreen>
           ),
         ),
       ),
+      backgroundColor: const Color(0xFFF5F6FA),
       body: Stack(
         children: [
           Positioned(
@@ -1167,7 +421,7 @@ class _ScheduleConsultationScreenState extends State<ScheduleConsultationScreen>
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF4834DF).withOpacity(0.1),
+                color: const Color(0xFF4834DF).withOpacity(0.1),
               ),
             ),
           ),
@@ -1179,145 +433,281 @@ class _ScheduleConsultationScreenState extends State<ScheduleConsultationScreen>
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF1E3799).withOpacity(0.1),
+                color: const Color(0xFF1E3799).withOpacity(0.1),
               ),
             ),
           ),
-          SingleChildScrollView(
-            physics: BouncingScrollPhysics(),
-            padding: EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  _buildFormField(
-                    controller: _homeownerController,
-                    label: 'Homeowner Name',
-                    icon: Icons.person,
-                    validator: (value) =>
-                    value!.isEmpty ? 'Please enter homeowner name' : null,
-                  ),
-                  SizedBox(height: 16),
-                  _buildFormField(
-                    controller: _projectController,
-                    label: 'Project Description',
-                    icon: Icons.work,
-                    validator: (value) =>
-                    value!.isEmpty ? 'Please enter project description' : null,
-                  ),
-                  SizedBox(height: 16),
-                  _buildFormField(
-                    controller: _dateController,
-                    label: 'Date',
-                    icon: Icons.calendar_today,
-                    readOnly: true,
-                    onTap: () => _selectDate(context),
-                    validator: (value) =>
-                    value!.isEmpty ? 'Please select a date' : null,
-                  ),
-                  SizedBox(height: 16),
-                  _buildFormField(
-                    controller: _timeController,
-                    label: 'Time',
-                    icon: Icons.access_time,
-                    readOnly: true,
-                    onTap: () => _selectTime(context),
-                    validator: (value) =>
-                    value!.isEmpty ? 'Please select a time' : null,
-                  ),
-                  SizedBox(height: 16),
-                  _buildFormField(
-                    controller: _notesController,
-                    label: 'Additional Notes',
-                    icon: Icons.notes,
-                    maxLines: 3,
-                  ),
-                  SizedBox(height: 32),
-                  Container(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF1E3799),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        elevation: 5,
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _isScheduling
+                ? SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: _selectedProjectId,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Project',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.work, color: Color(0xFF1E3799)),
                       ),
-                      child: Text(
-                        'Schedule Consultation',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      items: _projects.map((project) {
+                        return DropdownMenuItem<String>(
+                          value: project['id'],
+                          child: Text(project['title'] ?? 'Untitled Project'),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedProjectId = value;
+                          _projectTitleController.text = _projects
+                              .firstWhere((p) => p['id'] == value)['title'] ??
+                              '';
+                        });
+                      },
+                      validator: (value) => value == null ? 'Please select a project' : null,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    _buildFormField(
+                      controller: _projectTitleController,
+                      label: 'Project Title',
+                      icon: Icons.work,
+                      readOnly: true,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildFormField(
+                      controller: _dateController,
+                      label: 'Date',
+                      icon: Icons.calendar_today,
+                      readOnly: true,
+                      onTap: () => _selectDate(context),
+                      validator: (value) =>
+                      value!.isEmpty ? 'Please select a date' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildFormField(
+                      controller: _notesController,
+                      label: 'Additional Notes (Optional)',
+                      icon: Icons.notes,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _submitForm,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1E3799),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            elevation: 5,
+                          ),
+                          child: const Text(
+                            'Schedule',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isScheduling = false;
+                              _formKey.currentState!.reset();
+                              _projectTitleController.clear();
+                              _dateController.clear();
+                              _notesController.clear();
+                              _selectedProjectId = null;
+                              _selectedDate = null;
+                            });
+                          },
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: Color(0xFF4834DF)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
+            )
+                : Consumer<ConsultationController>(
+              builder: (context, controller, _) {
+                if (controller.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (controller.errorMessage != null) {
+                  return Center(child: Text(controller.errorMessage!));
+                }
+                List<Consultation> filteredConsultations = controller.consultations;
+                if (_selectedFilter != null && _selectedFilter != 'All') {
+                  filteredConsultations = controller.consultations
+                      .where((consultation) => consultation.status == _selectedFilter)
+                      .toList();
+                }
+                return filteredConsultations.isEmpty
+                    ? const Center(child: Text('No consultations found.'))
+                    : ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: filteredConsultations.length,
+                  itemBuilder: (context, index) {
+                    final consultation = filteredConsultations[index];
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () =>
+                                _showConsultationDetails(context, consultation),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: _getStatusColor(consultation.status)
+                                          .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    child: Icon(
+                                      Icons.person_outline,
+                                      color: _getStatusColor(consultation.status),
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Homeowner ID: ${consultation.homeownerId}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: Color(0xFF1E3799),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          consultation.projectTitle,
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 14,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[200],
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            DateFormat('yyyy-MM-dd')
+                                                .format(consultation.date),
+                                            style: TextStyle(
+                                              color: Colors.grey[700],
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getStatusColor(consultation.status)
+                                              .withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          consultation.status,
+                                          style: TextStyle(
+                                            color: _getStatusColor(consultation.status),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.arrow_forward_ios,
+                                          color: Colors.grey[400],
+                                          size: 20,
+                                        ),
+                                        onPressed: () => _showConsultationDetails(
+                                            context, consultation),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildFormField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    String? Function(String?)? validator,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    int maxLines = 1,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextFormField(
-        controller: controller,
-        validator: validator,
-        readOnly: readOnly,
-        onTap: onTap,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(
-            icon,
-            color: Color(0xFF1E3799),
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: maxLines > 1 ? 20 : 0,
-          ),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          setState(() {
+            _isScheduling = true;
+          });
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('New Consultation'),
+        backgroundColor: const Color(0xFF1E3799),
       ),
     );
   }
 
   @override
   void dispose() {
-    _homeownerController.dispose();
-    _projectController.dispose();
+    _projectTitleController.dispose();
     _dateController.dispose();
-    _timeController.dispose();
     _notesController.dispose();
     super.dispose();
   }
-}*/
+}
