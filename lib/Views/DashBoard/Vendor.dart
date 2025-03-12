@@ -5,8 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:buildbuddy/Controllers/authControllers.dart';
 import 'package:buildbuddy/Controllers/vendorController.dart';
-import 'package:intl/intl.dart'; // For date formatting
-import 'package:buildbuddy/Views/Shared//HelpandSupport.dart'; // Import the new HelpAndSupport screen
+import 'package:buildbuddy/Views/Shared/HelpandSupport.dart';
 
 class VendorDashboard extends StatefulWidget {
   const VendorDashboard({Key? key}) : super(key: key);
@@ -15,8 +14,7 @@ class VendorDashboard extends StatefulWidget {
   State<VendorDashboard> createState() => _VendorDashboardState();
 }
 
-class _VendorDashboardState extends State<VendorDashboard>
-    with SingleTickerProviderStateMixin {
+class _VendorDashboardState extends State<VendorDashboard> with SingleTickerProviderStateMixin {
   final AuthController _authController = Get.find<AuthController>();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -32,8 +30,6 @@ class _VendorDashboardState extends State<VendorDashboard>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
     _animationController.forward();
-    print(
-        'VendorDashboard init: User Role: ${_authController.currentUser.value?.role}, UID: ${_authController.currentUser.value?.uid} at ${DateTime.now()}');
   }
 
   @override
@@ -47,24 +43,20 @@ class _VendorDashboardState extends State<VendorDashboard>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: const Text('Sign Out',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text('Are you sure you want to sign out?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
-                style: TextStyle(color: Colors.grey[600])),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child:
-            const Text('Sign Out', style: TextStyle(color: Colors.white)),
+            child: const Text('Sign Out', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -77,10 +69,7 @@ class _VendorDashboardState extends State<VendorDashboard>
       } catch (e) {
         Get.snackbar('Error', 'Failed to sign out: $e',
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red.withOpacity(0.9),
-            colorText: Colors.white,
-            borderRadius: 10,
-            margin: const EdgeInsets.all(10));
+            backgroundColor: Colors.red);
       }
     }
   }
@@ -90,27 +79,23 @@ class _VendorDashboardState extends State<VendorDashboard>
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: _buildAppBar(),
-      drawer: _buildDrawer(), // Reintroduce the drawer
+      drawer: _buildDrawer(),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Consumer<VendorController>(
           builder: (context, controller, child) {
-            print(
-                'VendorDashboard build at ${DateTime.now()}: isLoading=${controller.isLoading}, errorMessage=${controller.errorMessage}, materialsLength=${controller.materials.length}, notificationsLength=${controller.notifications.length}, ordersLength=${controller.orders.length}');
-            if (controller.isLoading)
+            if (controller.isLoading) {
               return const Center(child: CircularProgressIndicator());
-            if (controller.errorMessage != null)
+            }
+            if (controller.errorMessage != null) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Error: ${controller.errorMessage}',
-                        style: const TextStyle(color: Colors.red)),
+                    Text('Error: ${controller.errorMessage}', style: const TextStyle(color: Colors.red)),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () async {
-                        print(
-                            'Retry button pressed on VendorDashboard at ${DateTime.now()}');
                         await controller.refreshData();
                       },
                       child: const Text('Retry'),
@@ -118,6 +103,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                   ],
                 ),
               );
+            }
             return _buildBody(controller);
           },
         ),
@@ -128,17 +114,21 @@ class _VendorDashboardState extends State<VendorDashboard>
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark),
-      backgroundColor: Colors.white,
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // Changed to light for white icons on blue background
+      ),
+      backgroundColor: const Color(0xFF1976D2), // Changed to deep blue
       elevation: 0,
       leading: Builder(
         builder: (context) => IconButton(
-          icon: const Icon(Icons.menu, color: Color(0xFF1E1E1E)),
-          onPressed: () => Scaffold.of(context).openDrawer(), // Enable drawer toggle
+          icon: const Icon(Icons.menu, color: Colors.white), // Changed to white
+          onPressed: () => Scaffold.of(context).openDrawer(),
         ),
       ),
-      actions: [_buildNotificationButton(), _buildProfileButton()],
+      actions: [
+        _buildNotificationButton(),
+        _buildProfileButton(),
+      ],
     );
   }
 
@@ -147,8 +137,7 @@ class _VendorDashboardState extends State<VendorDashboard>
       builder: (context, controller, child) => Stack(
         children: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined,
-                color: Color(0xFF1E1E1E)),
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white), // Changed to white
             onPressed: () => Get.toNamed('/vendor-notifications'),
           ),
           if (controller.notifications.isNotEmpty)
@@ -157,16 +146,17 @@ class _VendorDashboardState extends State<VendorDashboard>
               top: 8,
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                    color: Colors.red, shape: BoxShape.circle),
-                constraints:
-                const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Text('${controller.notifications.length}',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center),
+                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  '${controller.notifications.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
         ],
@@ -178,13 +168,15 @@ class _VendorDashboardState extends State<VendorDashboard>
     return Padding(
       padding: const EdgeInsets.only(right: 16.0),
       child: CircleAvatar(
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: const Color(0xFF2196F3), // Kept as is for contrast with AppBar
         radius: 18,
         child: Text(
-            _authController.currentUser.value?.email?[0].toUpperCase() ??
-                'V',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
+          _authController.currentUser.value?.email?[0].toUpperCase() ?? 'V',
+          style: const TextStyle(
+            color: Colors.white, // Already white, no change needed
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -203,10 +195,6 @@ class _VendorDashboardState extends State<VendorDashboard>
               const SizedBox(height: 24),
               _buildQuickStats(controller),
               const SizedBox(height: 24),
-              _buildSectionTitle('Recent Activities'),
-              const SizedBox(height: 16),
-              _buildRecentActivities(controller),
-              const SizedBox(height: 24),
               _buildSectionTitle('Quick Actions'),
               const SizedBox(height: 16),
               _buildActionsGrid(),
@@ -218,18 +206,24 @@ class _VendorDashboardState extends State<VendorDashboard>
   }
 
   Widget _buildWelcomeCard(VendorController controller) {
+    // Extract the username part before the @ symbol
+    String displayName = _authController.currentUser.value?.email != null &&
+        _authController.currentUser.value!.email.contains('@')
+        ? _authController.currentUser.value!.email.split('@')[0]
+        : 'Vendor';
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF00897B), Color(0xFF4DB6AC)],
+          colors: [Color(0xFF1976D2), Color(0xFF2196F3)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00897B).withOpacity(0.3),
+            color: const Color(0xFF1E88E5).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -242,62 +236,38 @@ class _VendorDashboardState extends State<VendorDashboard>
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Welcome back!',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white.withOpacity(0.9))),
-                          const SizedBox(height: 8),
-                          Text(
-                              _authController.currentUser.value?.email ??
-                                  'Vendor',
-                              style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white)),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.store,
-                          color: Colors.white, size: 24),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.check_circle,
-                          color: Colors.white, size: 16),
-                      SizedBox(width: 4),
-                      Text('Verified Vendor',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500))
+                      Text(
+                        'Welcome back!',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        displayName, // Updated to show only the username part
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.store, color: Colors.white, size: 24),
                 ),
               ],
             ),
@@ -306,15 +276,12 @@ class _VendorDashboardState extends State<VendorDashboard>
       ),
     );
   }
-
   Widget _buildQuickStats(VendorController controller) {
     final materials = controller.materials;
-    final totalSales = controller.orders.fold<double>(
-        0, (sum, order) => sum + (order.amount ?? 0.0));
+    final totalSales = controller.orders.fold<double>(0, (sum, order) => sum + (order.amount ?? 0.0));
     return Row(
       children: [
-        _buildStatCard('Active\nMaterials', '${materials.length}',
-            Icons.inventory_2, Colors.blue),
+        _buildStatCard('Active\nMaterials', '${materials.length}', Icons.inventory_2, Colors.blue),
         const SizedBox(width: 12),
         _buildStatCard(
             'Pending\nOrders',
@@ -322,14 +289,12 @@ class _VendorDashboardState extends State<VendorDashboard>
             Icons.shopping_cart,
             Colors.orange),
         const SizedBox(width: 12),
-        _buildStatCard('Total\nSales', '\$${totalSales.toStringAsFixed(2)}',
-            Icons.attach_money, Colors.green),
+        _buildStatCard('Total\nSales', '\$${totalSales.toStringAsFixed(2)}', Icons.attach_money, Colors.green),
       ],
     );
   }
 
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -348,98 +313,36 @@ class _VendorDashboardState extends State<VendorDashboard>
           children: [
             Icon(icon, color: color, size: 24),
             const SizedBox(height: 12),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 12, color: Colors.grey[600], height: 1.2)),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                height: 1.2,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) => Text(
+  Widget _buildSectionTitle(String title) {
+    return Text(
       title,
       style: const TextStyle(
-          fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)));
-
-  Widget _buildRecentActivities(VendorController controller) {
-    final recentOrders = controller.orders.take(2).toList();
-    if (recentOrders.isEmpty) return const Text('No recent activities');
-    return Column(
-      children: recentOrders.map((order) => Column(
-        children: [
-          _buildActivityCard(
-              'Order #${order.id}',
-              'Status: ${order.status}',
-              DateFormat('MMM dd, yyyy – HH:mm')
-                  .format(order.createdAt),
-              Icons.shopping_cart,
-              Colors.blue),
-          const SizedBox(height: 12),
-        ],
-      )).toList(),
-    );
-  }
-
-  Widget _buildActivityCard(
-      String title, String description, String time, IconData icon, Color color) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {},
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: color),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text(description,
-                          style: TextStyle(
-                              fontSize: 14, color: Colors.grey[600])),
-                      const SizedBox(height: 4),
-                      Text(time,
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey[400])),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF1E1E1E),
       ),
     );
   }
@@ -452,7 +355,7 @@ class _VendorDashboardState extends State<VendorDashboard>
       {'title': 'Messages', 'icon': Icons.message_outlined, 'color': const Color(0xFFE91E63), 'onTap': () => Get.toNamed('/vendor-messages')},
       {'title': 'Reviews', 'icon': Icons.star_outline, 'color': const Color(0xFF9C27B0), 'onTap': () => Get.toNamed('/vendor-reviews')},
       {'title': 'Analytics', 'icon': Icons.analytics_outlined, 'color': const Color(0xFF607D8B), 'onTap': () => Get.toNamed('/vendor-analytics')},
-      {'title': 'Support', 'icon': Icons.help_outline, 'color': const Color(0xFF795548), 'onTap': () => Get.toNamed('/vendor-help')}, // Keep in grid
+      {'title': 'Help & Support', 'icon': Icons.help_outline, 'color': const Color(0xFF607D8B), 'onTap': () => Get.toNamed('/vendor-help')},
     ];
     return GridView.builder(
       shrinkWrap: true,
@@ -523,65 +426,17 @@ class _VendorDashboardState extends State<VendorDashboard>
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  _buildDrawerItem(
-                      icon: Icons.dashboard_outlined,
-                      title: 'Dashboard',
-                      onTap: () => Navigator.pop(context)),
-                  _buildDrawerItem(
-                      icon: Icons.inventory_2,
-                      title: 'Manage Products',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Get.toNamed('/manage-products');
-                      }),
-                  _buildDrawerItem(
-                      icon: Icons.shopping_cart_outlined,
-                      title: 'Orders',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Get.toNamed('/vendor-orders');
-                      }),
-                  _buildDrawerItem(
-                      icon: Icons.receipt_outlined,
-                      title: 'Invoices',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Get.toNamed('/vendor-invoices');
-                      }),
-                  _buildDrawerItem(
-                      icon: Icons.message_outlined,
-                      title: 'Messages',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Get.toNamed('/vendor-messages');
-                      }),
-                  _buildDrawerItem(
-                      icon: Icons.star_outline,
-                      title: 'Reviews',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Get.toNamed('/vendor-reviews');
-                      }),
-                  _buildDrawerItem(
-                      icon: Icons.analytics_outlined,
-                      title: 'Analytics',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Get.toNamed('/vendor-analytics');
-                      }),
+                  _buildDrawerItem(icon: Icons.dashboard_outlined, title: 'Dashboard', onTap: () => Navigator.pop(context)),
+                  _buildDrawerItem(icon: Icons.inventory_2, title: 'Manage Products', onTap: () { Navigator.pop(context); Get.toNamed('/manage-products'); }),
+                  _buildDrawerItem(icon: Icons.shopping_cart_outlined, title: 'Orders', onTap: () { Navigator.pop(context); Get.toNamed('/vendor-orders'); }),
+                  _buildDrawerItem(icon: Icons.receipt_outlined, title: 'Invoices', onTap: () { Navigator.pop(context); Get.toNamed('/vendor-invoices'); }),
+                  _buildDrawerItem(icon: Icons.message_outlined, title: 'Messages', onTap: () { Navigator.pop(context); Get.toNamed('/vendor-messages'); }),
+                  _buildDrawerItem(icon: Icons.star_outline, title: 'Reviews', onTap: () { Navigator.pop(context); Get.toNamed('/vendor-reviews'); }),
+                  _buildDrawerItem(icon: Icons.analytics_outlined, title: 'Analytics', onTap: () { Navigator.pop(context); Get.toNamed('/vendor-analytics'); }),
                   const Divider(height: 32),
-                  _buildDrawerItem(
-                      icon: Icons.settings_outlined,
-                      title: 'Settings',
-                      onTap: () {}),
-                  _buildDrawerItem(
-                      icon: Icons.logout,
-                      title: 'Sign Out',
-                      onTap: () {
-                        Navigator.pop(context);
-                        _handleSignOut();
-                      },
-                      color: Colors.red),
+                  _buildDrawerItem(icon: Icons.settings_outlined, title: 'Settings', onTap: () {}),
+                  _buildDrawerItem(icon: Icons.help_outline, title: 'Help & Support', onTap: () { Navigator.pop(context); Get.toNamed('/vendor-help'); }),
+                  _buildDrawerItem(icon: Icons.logout, title: 'Sign Out', onTap: () { Navigator.pop(context); _handleSignOut(); }, color: Colors.red),
                 ],
               ),
             ),
@@ -595,10 +450,9 @@ class _VendorDashboardState extends State<VendorDashboard>
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
       decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(
-              bottom: BorderSide(
-                  color: Colors.grey.withOpacity(0.2), width: 1))),
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 1)),
+      ),
       child: Column(
         children: [
           Container(
@@ -606,45 +460,35 @@ class _VendorDashboardState extends State<VendorDashboard>
             height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF00897B).withOpacity(0.1),
+              color: const Color(0xFF2196F3).withOpacity(0.1),
             ),
-            child: const Center(
-              child: Icon(Icons.store,
-                  size: 40, color: Color(0xFF00897B)),
-            ),
+            child: const Center(child: Icon(Icons.store, size: 40, color: Color(0xFF2196F3))),
           ),
           const SizedBox(height: 16),
           Text(
-              _authController.currentUser.value?.email ?? 'Vendor',
-              style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center),
+            _authController.currentUser.value?.email ?? 'Vendor',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 4),
-          Text('Professional Vendor',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+          Text(
+            'Professional Vendor',
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDrawerItem(
-      {required IconData icon,
-        required String title,
-        required VoidCallback onTap,
-        Color? color}) {
+  Widget _buildDrawerItem({required IconData icon, required String title, required VoidCallback onTap, Color? color}) {
     return ListTile(
-      leading: Icon(icon, color: color ?? const Color(0xFF00897B), size: 24),
-      title: Text(title,
-          style: TextStyle(
-              color: color ?? const Color(0xFF1E1E1E),
-              fontSize: 16,
-              fontWeight: FontWeight.w500)),
+      leading: Icon(icon, color: color ?? const Color(0xFF1976D2), size: 24),
+      title: Text(title, style: TextStyle(color: color ?? const Color(0xFF1E1E1E), fontSize: 16, fontWeight: FontWeight.w500)),
       onTap: onTap,
       dense: true,
       horizontalTitleGap: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      contentPadding:
-      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 }

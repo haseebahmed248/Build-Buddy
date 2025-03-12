@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:buildbuddy/Views/Login/startedScreen.dart';
 import 'package:buildbuddy/Controllers/authControllers.dart';
 import 'Contractor/Payments.dart';
@@ -90,6 +90,7 @@ class ContractorDashboardState extends State<ContractorDashboard>
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: _buildAppBar(),
+      drawer: _buildDrawer(),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Obx(() {
@@ -97,7 +98,7 @@ class ContractorDashboardState extends State<ContractorDashboard>
           if (userData == null) {
             return const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2196F3)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1976D2)),
               ),
             );
           }
@@ -111,13 +112,23 @@ class ContractorDashboardState extends State<ContractorDashboard>
     return AppBar(
       systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
       ),
-      backgroundColor: Colors.white,
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1976D2), Color(0xFF2196F3)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      ),
       elevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.menu, color: Color(0xFF1E1E1E)),
-        onPressed: () {},
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
       ),
       actions: [
         _buildNotificationButton(),
@@ -130,8 +141,8 @@ class ContractorDashboardState extends State<ContractorDashboard>
     return Stack(
       children: [
         IconButton(
-          icon: const Icon(Icons.notifications_outlined, color: Color(0xFF1E1E1E)),
-          onPressed: () {},
+          icon: const Icon(Icons.notifications, color: Colors.white),
+          onPressed: () => Get.toNamed('/notifications'),
         ),
         Positioned(
           right: 8,
@@ -144,7 +155,7 @@ class ContractorDashboardState extends State<ContractorDashboard>
             ),
             constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
             child: const Text(
-              '3',
+              '0',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 10,
@@ -161,20 +172,14 @@ class ContractorDashboardState extends State<ContractorDashboard>
   Widget _buildProfileButton() {
     return Padding(
       padding: const EdgeInsets.only(right: 16.0),
-      child: GestureDetector(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        ),
-        child: CircleAvatar(
-          backgroundColor: const Color(0xFF2196F3),
-          radius: 18,
-          child: Text(
-            _authController.currentUser.value?.email?[0].toUpperCase() ?? 'C',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+      child: CircleAvatar(
+        backgroundColor: const Color(0xFF2196F3),
+        radius: 18,
+        child: Text(
+          _authController.currentUser.value?.email?[0].toUpperCase() ?? 'C',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
@@ -212,7 +217,7 @@ class ContractorDashboardState extends State<ContractorDashboard>
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+          colors: [Color(0xFF1976D2), Color(0xFF2196F3)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -228,10 +233,6 @@ class ContractorDashboardState extends State<ContractorDashboard>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ProfileScreen()),
-          ),
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -377,7 +378,12 @@ class ContractorDashboardState extends State<ContractorDashboard>
         'route': '/contractor-reviews',
         'color': const Color(0xFF9C27B0),
       },
-      {'title': 'Help & Support', 'icon': Icons.help_outline, 'route': '/contractor-help', 'color': const Color(0xFF607D8B)},
+      {
+        'title': 'Help & Support',
+        'icon': Icons.help_outline,
+        'route': '/contractor-help',
+        'color': const Color(0xFF607D8B),
+      },
     ];
 
     return GridView.builder(
@@ -442,215 +448,27 @@ class ContractorDashboardState extends State<ContractorDashboard>
       ),
     );
   }
-}
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
 
-  // Method to handle sign out
-  Future<void> _handleSignOut(BuildContext context) async {
-    final AuthController authController = Get.find<AuthController>();
-
-    // Show confirmation dialog
-    final bool confirm = await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: const Text('Are you sure you want to sign out?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Sign Out', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
-    ) ?? false;
-
-    // Perform sign out if confirmed
-    if (confirm) {
-      try {
-        await authController.signOut();
-        // Navigate to the stakeholder/login screen and remove all previous routes
-        Get.offAllNamed('/stakeholder');
-      } catch (e) {
-        // Show error if sign out fails
-        Get.snackbar(
-          'Error',
-          'Failed to sign out: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.9),
-          colorText: Colors.white,
-          borderRadius: 10,
-          margin: const EdgeInsets.all(10),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            color: Color(0xFF1E1E1E),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E1E1E)),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileHeader(context),
-            const SizedBox(height: 24),
-            _buildProfileSection('Personal Information'),
-            _buildProfileCard(),
-            const SizedBox(height: 24),
-            _buildProfileSection('Business Information'),
-            _buildBusinessCard(),
-            const SizedBox(height: 24),
-            _buildProfileSection('Account Settings'),
-            _buildSettingsCard(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E88E5).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Stack(
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: Column(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.person,
-                    size: 40,
-                    color: Color(0xFF1976D2),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Professional Builder',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.star,
-                          color: Colors.amber,
-                          size: 20,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          '4.9',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          ' (128 reviews)',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
+          _buildDrawerHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
                 children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    'Verified',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  _buildDrawerItem(icon: Icons.dashboard_outlined, title: 'Dashboard', onTap: () => Navigator.pop(context)),
+                  _buildDrawerItem(icon: Icons.construction, title: 'Manage Projects', onTap: () { Navigator.pop(context); Get.toNamed('/manage-projects'); }),
+                  _buildDrawerItem(icon: Icons.inventory_2, title: 'Material Orders', onTap: () { Navigator.pop(context); Get.toNamed('/material-orders'); }),
+                  _buildDrawerItem(icon: Icons.message, title: 'Messages', onTap: () { Navigator.pop(context); Get.toNamed('/contractor-messages'); }),
+                  _buildDrawerItem(icon: Icons.payments_outlined, title: 'Payments', onTap: () { Navigator.pop(context); Get.toNamed('/contractor-payments'); }),
+                  _buildDrawerItem(icon: Icons.star_border, title: 'Reviews', onTap: () { Navigator.pop(context); Get.toNamed('/contractor-reviews'); }),
+                  const Divider(height: 32),
+                  _buildDrawerItem(icon: Icons.settings_outlined, title: 'Settings', onTap: () {}),
+                  _buildDrawerItem(icon: Icons.help_outline, title: 'Help & Support', onTap: () { Navigator.pop(context); Get.toNamed('/contractor-help'); }),
+                  _buildDrawerItem(icon: Icons.logout, title: 'Sign Out', onTap: () { Navigator.pop(context); _handleSignOut(); }, color: Colors.red),
                 ],
               ),
             ),
@@ -660,210 +478,42 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileSection(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1E1E1E),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileCard() {
+  Widget _buildDrawerHeader() {
     return Container(
+      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 1)),
       ),
       child: Column(
-        children: [
-          _buildProfileItem(
-              Icons.email_outlined, 'Email', 'contractor@buildbuddy.com'),
-          const Divider(height: 1),
-          _buildProfileItem(Icons.phone_outlined, 'Phone', '+1 234 567 890'),
-          const Divider(height: 1),
-          _buildProfileItem(
-              Icons.location_on_outlined, 'Location', 'New York, USA'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBusinessCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildProfileItem(
-              Icons.business_outlined, 'Company', 'BuildBuddy Construction'),
-          const Divider(height: 1),
-          _buildProfileItem(Icons.work_outline, 'Experience', '8 years'),
-          const Divider(height: 1),
-          _buildProfileItem(Icons.engineering_outlined, 'Expertise',
-              'Residential Construction'),
-          const Divider(height: 1),
-          _buildProfileItem(
-              Icons.card_membership_outlined, 'License', 'NYC-2024-12345'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingsCard(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildSettingItem(context, Icons.person_outline, 'Edit Profile',
-              onTap: () {}),
-          const Divider(height: 1),
-          _buildSettingItem(context, Icons.lock_outline, 'Change Password',
-              onTap: () {}),
-          const Divider(height: 1),
-          _buildSettingItem(context, Icons.notifications_outlined, 'Notifications',
-              onTap: () {}),
-          const Divider(height: 1),
-          _buildSettingItem(context, Icons.privacy_tip_outlined, 'Privacy Policy',
-              onTap: () {}),
-          const Divider(height: 1),
-          _buildSettingItem(context, Icons.logout, 'Sign Out', onTap: () {
-            _handleSignOut(context);
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileItem(IconData icon, String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
+              shape: BoxShape.circle,
               color: const Color(0xFF2196F3).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: const Color(0xFF2196F3),
-            ),
+            child: const Center(child: Icon(Icons.person_outline, size: 40, color: Color(0xFF2196F3))),
           ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: 16),
+          Text(_authController.currentUser.value?.email ?? 'Contractor', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+          const SizedBox(height: 4),
+          Text('Contractor', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
         ],
       ),
     );
   }
 
-  Widget _buildSettingItem(
-      BuildContext context, IconData icon, String title,
-      {required VoidCallback onTap}) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2196F3).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  size: 20,
-                  color: const Color(0xFF2196F3),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey[400],
-              ),
-            ],
-          ),
-        ),
-      ),
+  Widget _buildDrawerItem({required IconData icon, required String title, required VoidCallback onTap, Color? color}) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? const Color(0xFF1976D2), size: 24),
+      title: Text(title, style: TextStyle(color: color ?? const Color(0xFF1E1E1E), fontSize: 16, fontWeight: FontWeight.w500)),
+      onTap: onTap,
+      dense: true,
+      horizontalTitleGap: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

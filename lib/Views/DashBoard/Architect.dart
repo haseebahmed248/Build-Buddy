@@ -227,12 +227,15 @@ class _ArchitectDashboardState extends State<ArchitectDashboard> with SingleTick
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      systemOverlayStyle: const SystemUiOverlayStyle(statusBarColor: Colors.transparent, statusBarIconBrightness: Brightness.dark),
-      backgroundColor: Colors.white,
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // Changed to light for white icons
+      ),
+      backgroundColor: const Color(0xFF1976D2), // Changed to deep blue
       elevation: 0,
       leading: Builder(
         builder: (context) => IconButton(
-          icon: const Icon(Icons.menu, color: Color(0xFF1E1E1E)),
+          icon: const Icon(Icons.menu, color: Colors.white), // Changed to white
           onPressed: () => Scaffold.of(context).openDrawer(),
         ),
       ),
@@ -317,6 +320,11 @@ class _ArchitectDashboardState extends State<ArchitectDashboard> with SingleTick
   }
 
   Widget _buildWelcomeCard(userData) {
+    // Extract the username part before the @ symbol
+    String displayName = userData.email != null
+        ? userData.email.split('@')[0]
+        : 'Architect';
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -342,7 +350,10 @@ class _ArchitectDashboardState extends State<ArchitectDashboard> with SingleTick
                         children: [
                           Text('Welcome back!', style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.9))),
                           const SizedBox(height: 8),
-                          Text(userData.email ?? 'Architect', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                          Text(
+                            displayName, // Updated to show only the username part
+                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
                         ],
                       ),
                     ),
@@ -360,7 +371,6 @@ class _ArchitectDashboardState extends State<ArchitectDashboard> with SingleTick
       ),
     );
   }
-
   Widget _buildQuickStats() {
     return Row(
       children: [

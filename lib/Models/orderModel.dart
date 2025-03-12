@@ -8,7 +8,7 @@ class Order {
   final String materialId;
   final int quantity;
   final double amount;
-  final String status;
+  late final String status;
   final DateTime createdAt;
   final DateTime? updatedAt;
 

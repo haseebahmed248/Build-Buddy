@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'package:buildbuddy/Models/orderModel.dart';
+import 'package:buildbuddy/Models/messageModel.dart' as bbMessage;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:buildbuddy/Controllers/authControllers.dart';
-import 'package:buildbuddy/Models/orderModel.dart';
-import 'package:buildbuddy/Models/userModels.dart';
+
+import '../Models/userModels.dart';
 
 class ContractorController with ChangeNotifier {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
@@ -14,17 +16,30 @@ class ContractorController with ChangeNotifier {
   List<Order> _orders = [];
   List<Map<String, dynamic>> _vendorMaterials = [];
   List<Map<String, dynamic>> _projects = [];
-  List<Map<String, dynamic>> _messages = [];
+  List<bbMessage.Message> _messages = [];
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isInitialized = false;
+
+  int _activeProjects = 0;
+  int _pendingOrders = 0;
+  int _newMessages = 0;
 
   List<Order> get orders => _orders;
   List<Map<String, dynamic>> get vendorMaterials => _vendorMaterials;
   List<Map<String, dynamic>> get projects => _projects;
-  List<Map<String, dynamic>> get messages => _messages;
+  List<bbMessage.Message> get messages => _messages;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  String? get currentUserId => _auth.currentUser?.uid;
+  bool get isInitialized => _isInitialized;
+  set isInitialized(bool value) {
+    _isInitialized = value;
+    notifyListeners();
+  }
+
+  int get activeProjects => _activeProjects;
+  int get pendingOrders => _pendingOrders;
+  int get newMessages => _newMessages;
 
   StreamSubscription<DatabaseEvent>? _ordersSubscription;
   StreamSubscription<DatabaseEvent>? _materialsSubscription;
@@ -38,11 +53,11 @@ class ContractorController with ChangeNotifier {
   }
 
   void _onAuthStateChanged() {
-    print('Auth state changed at ${DateTime.now()}');
+    print('Auth state changed at ${DateTime.now()}, checking contractor status');
     _checkContractorStatus();
   }
 
-  void _checkContractorStatus() {
+  void _checkContractorStatus() async {
     final authUser = _auth.currentUser;
     final user = _authController.currentUser.value;
     print(
@@ -91,8 +106,7 @@ class ContractorController with ChangeNotifier {
         .onValue
         .listen(
           (event) {
-        print(
-            'Orders data event for UID: ${user.uid} at ${DateTime.now()}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print('Orders snapshot at ${DateTime.now()}, exists: ${event.snapshot.exists}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
@@ -100,63 +114,56 @@ class ContractorController with ChangeNotifier {
                 .map((e) => Order.fromMap(
                 Map<String, dynamic>.from(e.value), id: e.key as String))
                 .toList();
-            print('Orders parsed successfully: ${_orders.map((o) => o.id).toList()}');
+            _pendingOrders = _orders.where((order) => order.status == 'Pending').length;
           } else {
             _orders = [];
-            print('No valid data in orders snapshot at ${DateTime.now()}');
+            _pendingOrders = 0;
           }
         } else {
           _orders = [];
-          print('No orders found for contractorId: ${user.uid} at ${DateTime.now()}');
+          _pendingOrders = 0;
         }
-        _errorMessage = null;
+        print('Orders updated - Total: ${_orders.length}, Pending: $_pendingOrders');
         notifyListeners();
       },
       onError: (error) {
-        print(
-            'Error fetching orders at ${DateTime.now()}: $error, Path: orders, UID: ${user.uid}, Stack: ${StackTrace.current}');
+        print('Error fetching orders: $error');
+        _errorMessage = 'Failed to fetch orders: $error';
         _orders = [];
+        _pendingOrders = 0;
         notifyListeners();
       },
     );
 
-    // Vendor Materials Listener
+    // Materials Listener
     _materialsSubscription?.cancel();
-    _materialsSubscription = _database.child('materials').onValue.listen(
+    _materialsSubscription = _database
+        .child('materials')
+        .onValue
+        .listen(
           (event) {
-        print(
-            'Vendor materials data event at ${DateTime.now()}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print('Materials snapshot at ${DateTime.now()}, exists: ${event.snapshot.exists}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
-            _vendorMaterials = [];
-            data.forEach((materialId, materialData) {
-              print('Processing materialId: $materialId, data: $materialData');
-              if (materialData is Map && materialData.containsKey('vendorId')) {
-                _vendorMaterials.add(Map<String, dynamic>.from(materialData as Map)
-                  ..['materialId'] = materialId);
-              } else {
-                print('Skipping materialId: $materialId, invalid data or missing vendorId');
-              }
-            });
-            print(
-                'Vendor materials parsed: ${_vendorMaterials.length} items at ${DateTime.now()}: $_vendorMaterials');
+            _vendorMaterials = data.entries.map((e) {
+              final material = Map<String, dynamic>.from(e.value)
+                ..['materialId'] = e.key;
+              return material;
+            }).toList();
           } else {
             _vendorMaterials = [];
-            print('No valid data in vendor materials snapshot at ${DateTime.now()}');
           }
         } else {
           _vendorMaterials = [];
-          print('No vendor materials found at ${DateTime.now()}');
         }
-        _isLoading = false;
+        print('Materials updated: ${_vendorMaterials.length}');
         notifyListeners();
       },
       onError: (error) {
-        print(
-            'Error fetching vendor materials at ${DateTime.now()}: $error, Path: materials, Stack: ${StackTrace.current}');
+        print('Error fetching materials: $error');
+        _errorMessage = 'Failed to fetch materials: $error';
         _vendorMaterials = [];
-        _isLoading = false;
         notifyListeners();
       },
     );
@@ -164,38 +171,36 @@ class ContractorController with ChangeNotifier {
     // Projects Listener
     _projectsSubscription?.cancel();
     _projectsSubscription = _database
-        .child('projects')
-        .orderByChild('contractorId')
-        .equalTo(user.uid)
+        .child('projects/${user.uid}')
         .onValue
         .listen(
           (event) {
-        print(
-            'Projects data event for UID: ${user.uid} at ${DateTime.now()}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print('Projects snapshot at ${DateTime.now()}, exists: ${event.snapshot.exists}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
             _projects = data.entries
-                .where((e) => (e.value as Map?)?.containsKey('status') ?? false)
-                .where((e) => (e.value as Map)['status'] == 'active')
-                .map((e) => Map<String, dynamic>.from(e.value)
-              ..['projectId'] = e.key as String)
+                .map((e) => Map<String, dynamic>.from(e.value)..['id'] = e.key)
                 .toList();
-            print('Projects parsed successfully: ${_projects.map((p) => p['projectId']).toList()}');
+            _activeProjects = _projects
+                .where((project) => project['status'] == 'Active')
+                .length;
           } else {
             _projects = [];
-            print('No valid data in projects snapshot at ${DateTime.now()}');
+            _activeProjects = 0;
           }
         } else {
           _projects = [];
-          print('No projects found for contractorId: ${user.uid} at ${DateTime.now()}');
+          _activeProjects = 0;
         }
+        print('Active Projects updated to: $_activeProjects');
         notifyListeners();
       },
       onError: (error) {
-        print(
-            'Error fetching projects at ${DateTime.now()}: $error, Path: projects, UID: ${user.uid}, Stack: ${StackTrace.current}');
+        print('Error fetching projects: $error');
+        _errorMessage = 'Failed to fetch projects: $error';
         _projects = [];
+        _activeProjects = 0;
         notifyListeners();
       },
     );
@@ -203,38 +208,39 @@ class ContractorController with ChangeNotifier {
     // Messages Listener
     _messagesSubscription?.cancel();
     _messagesSubscription = _database
-        .child('messages')
-        .orderByChild('contractorId')
+        .child('messages/contractor_vendor')
+        .orderByChild('senderId')
         .equalTo(user.uid)
         .onValue
         .listen(
           (event) {
-        print(
-            'Messages data event for UID: ${user.uid} at ${DateTime.now()}, snapshot exists: ${event.snapshot.exists}, value: ${event.snapshot.value}');
+        print('Messages snapshot at ${DateTime.now()}, exists: ${event.snapshot.exists}');
         if (event.snapshot.exists) {
           final data = event.snapshot.value as Map<dynamic, dynamic>?;
           if (data != null) {
             _messages = data.entries
-                .where((e) => (e.value as Map?)?.containsKey('read') ?? false)
-                .where((e) => (e.value as Map)['read'] == false)
-                .map((e) => Map<String, dynamic>.from(e.value)
-              ..['messageId'] = e.key as String)
+                .map((e) => bbMessage.Message.fromMap(
+                Map<String, dynamic>.from(e.value), id: e.key as String))
                 .toList();
-            print('Messages parsed successfully: ${_messages.map((m) => m['messageId']).toList()}');
+            _newMessages = _messages
+                .where((message) => message.read == false)
+                .length;
           } else {
             _messages = [];
-            print('No valid data in messages snapshot at ${DateTime.now()}');
+            _newMessages = 0;
           }
         } else {
           _messages = [];
-          print('No messages found for contractorId: ${user.uid} at ${DateTime.now()}');
+          _newMessages = 0;
         }
+        print('New Messages updated to: $_newMessages');
         notifyListeners();
       },
       onError: (error) {
-        print(
-            'Error fetching messages at ${DateTime.now()}: $error, Path: messages, UID: ${user.uid}, Stack: ${StackTrace.current}');
+        print('Error fetching messages: $error');
+        _errorMessage = 'Failed to fetch messages: $error';
         _messages = [];
+        _newMessages = 0;
         notifyListeners();
       },
     );
@@ -250,22 +256,72 @@ class ContractorController with ChangeNotifier {
     _vendorMaterials.clear();
     _projects.clear();
     _messages.clear();
+    _activeProjects = 0;
+    _pendingOrders = 0;
+    _newMessages = 0;
     notifyListeners();
   }
 
-  Future<void> refreshData() async {
-    print('Refreshing data at ${DateTime.now()}');
+  Future<void> fetchMaterials() async {
     _isLoading = true;
     notifyListeners();
     try {
-      _stopRealTimeListeners();
-      await Future.delayed(Duration(milliseconds: 100));
-      _startRealTimeListeners();
+      final snapshot = await _database.child('materials').get();
+      if (snapshot.exists) {
+        final data = snapshot.value as Map<dynamic, dynamic>?;
+        if (data != null) {
+          _vendorMaterials = data.entries.map((e) {
+            final material = Map<String, dynamic>.from(e.value)
+              ..['materialId'] = e.key;
+            return material;
+          }).toList();
+        } else {
+          _vendorMaterials = [];
+        }
+      } else {
+        _vendorMaterials = [];
+      }
       _errorMessage = null;
-      print('Refresh completed successfully at ${DateTime.now()}');
     } catch (e) {
-      _errorMessage = 'Failed to refresh data: $e';
-      print('Refresh data error at ${DateTime.now()}: $_errorMessage');
+      _errorMessage = 'Failed to fetch materials: $e';
+      print('Fetch materials error: $_errorMessage');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchOrders() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw 'User not authenticated';
+      final snapshot = await _database
+          .child('orders')
+          .orderByChild('contractorId')
+          .equalTo(user.uid)
+          .get();
+      if (snapshot.exists) {
+        final data = snapshot.value as Map<dynamic, dynamic>?;
+        if (data != null) {
+          _orders = data.entries
+              .map((e) => Order.fromMap(
+              Map<String, dynamic>.from(e.value), id: e.key as String))
+              .toList();
+          _pendingOrders = _orders.where((order) => order.status == 'Pending').length;
+        } else {
+          _orders = [];
+          _pendingOrders = 0;
+        }
+      } else {
+        _orders = [];
+        _pendingOrders = 0;
+      }
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = 'Failed to fetch orders: $e';
+      print('Fetch orders error: $_errorMessage');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -278,64 +334,45 @@ class ContractorController with ChangeNotifier {
     try {
       final user = _auth.currentUser;
       if (user == null) throw 'User not authenticated';
-      print('Attempting to place order with UID: ${user.uid} at ${DateTime.now()}');
 
-      if (_vendorMaterials.isEmpty) {
-        _errorMessage = 'No materials available to order.';
-        print('No materials available at ${DateTime.now()}');
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      final material = _vendorMaterials.firstWhere(
-            (m) => m['materialId'] == materialId && m['vendorId'] == vendorId,
-        orElse: () => throw Exception('Material not found'),
-      );
-      final amount = quantity * (material['price'] as num? ?? 0.0).toDouble();
+      final materialSnapshot = await _database.child('materials/$materialId').get();
+      if (!materialSnapshot.exists) throw 'Material not found';
+      final materialData = Map<String, dynamic>.from(materialSnapshot.value as Map);
+      final price = materialData['price'] ?? 0;
 
       final orderRef = _database.child('orders').push();
-      await orderRef.set({
-        'contractorId': user.uid,
+      final orderId = orderRef.key;
+      if (orderId == null) throw 'Failed to generate order ID';
+
+      final orderData = {
+        'id': orderId,
         'vendorId': vendorId,
+        'contractorId': user.uid,
         'materialId': materialId,
-        'material': material['name'],
+        'material': materialData['name'],
         'quantity': quantity,
-        'amount': amount,
+        'amount': price * quantity,
         'status': 'Pending',
         'createdAt': DateTime.now().toIso8601String(),
-      });
-      print('Order placed successfully: ${orderRef.key} at ${DateTime.now()}');
+      };
+
+      await orderRef.set(orderData);
       _errorMessage = null;
-      await refreshData();
     } catch (e) {
-      print('Place order error at ${DateTime.now()}: $e');
       _errorMessage = 'Failed to place order: $e';
+      print('Place order error: $_errorMessage');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> cancelOrder(String orderId) async {
-    _isLoading = true;
+  void cancelOrder(String orderId) {
+    final order = _orders.firstWhere((o) => o.id == orderId);
+    order.status = 'Cancelled';
+    _database.child('orders/$orderId').update({'status': 'Cancelled'});
+    _pendingOrders = _orders.where((order) => order.status == 'Pending').length;
     notifyListeners();
-    try {
-      print('Cancelling order: $orderId at ${DateTime.now()}');
-      await _database.child('orders/$orderId').update({
-        'status': 'Cancelled',
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
-      print('Order cancelled successfully: $orderId at ${DateTime.now()}');
-      _errorMessage = null;
-      await refreshData();
-    } catch (e) {
-      print('Cancel order error at ${DateTime.now()}: $e');
-      _errorMessage = 'Failed to cancel order: $e';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
   @override

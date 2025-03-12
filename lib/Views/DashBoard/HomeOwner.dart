@@ -1,12 +1,10 @@
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:buildbuddy/Controllers/authControllers.dart';
 import 'package:buildbuddy/Controllers/projectController.dart';
 import 'package:provider/provider.dart';
-import '../Shared/widgets/appBarColor.dart';
 import 'HomeOwner/chat/homeowner_chat_screen.dart';
-import 'package:buildbuddy/Models/projectModel.dart'; // Import for ProjectStatus
 import 'package:buildbuddy/Views/Shared/HelpandSupport.dart';
 
 class HomeOwnerDashboard extends StatefulWidget {
@@ -16,8 +14,7 @@ class HomeOwnerDashboard extends StatefulWidget {
   HomeOwnerDashboardState createState() => HomeOwnerDashboardState();
 }
 
-class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
-    with SingleTickerProviderStateMixin {
+class HomeOwnerDashboardState extends State<HomeOwnerDashboard> with SingleTickerProviderStateMixin {
   final AuthController _authController = Get.find<AuthController>();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -33,7 +30,6 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
-    // Load stats after initial build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final user = _authController.currentUser.value;
@@ -55,34 +51,26 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15)),
-          title: const Text('Sign Out',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
           content: const Text('Are you sure you want to sign out?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel',
-                  style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 10),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('Sign Out',
-                  style: TextStyle(color: Colors.white)),
+              child: const Text('Sign Out', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
       },
-    ) ??
-        false;
+    ) ?? false;
 
     if (confirm) {
       try {
@@ -91,15 +79,9 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
       } catch (e) {
         Get.snackbar(
           'Error',
-          'Failed to sign out: ${e.toString()}',
+          'Failed to sign out: $e',
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.9),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-          borderRadius: 10,
-          margin: const EdgeInsets.all(10),
-          isDismissible: true,
-          dismissDirection: DismissDirection.horizontal,
+          backgroundColor: Colors.red,
         );
       }
     }
@@ -110,6 +92,7 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: _buildAppBar(),
+      drawer: _buildDrawer(),
       body: Obx(() {
         final userData = _authController.currentUser.value;
         if (userData == null) {
@@ -129,14 +112,16 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // Changed to light for white icons
+      ),
+      backgroundColor: const Color(0xFF1976D2), // Changed to deep blue
       elevation: 0,
-      backgroundColor: kAppBarColor,
-      title: const Text(
-        'Build Buddy',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 22,
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white), // Changed to white
+          onPressed: () => Scaffold.of(context).openDrawer(),
         ),
       ),
       actions: [
@@ -150,8 +135,7 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
     return Stack(
       children: [
         IconButton(
-          icon: const Icon(Icons.notifications_outlined,
-              color: Color(0xFF1E1E1E)),
+          icon: const Icon(Icons.notifications_outlined, color: Color(0xFF1E1E1E)),
           onPressed: () => Get.toNamed('/notifications'),
         ),
         Positioned(
@@ -163,10 +147,7 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
               color: Colors.red,
               shape: BoxShape.circle,
             ),
-            constraints: const BoxConstraints(
-              minWidth: 16,
-              minHeight: 16,
-            ),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
             child: const Text(
               '3',
               style: TextStyle(
@@ -185,9 +166,16 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
   Widget _buildProfileButton() {
     return Padding(
       padding: const EdgeInsets.only(right: 16.0),
-      child: IconButton(
-        icon: const Icon(Icons.logout, color: Color(0xFF1E1E1E)),
-        onPressed: _handleSignOut,
+      child: CircleAvatar(
+        backgroundColor: const Color(0xFF2196F3),
+        radius: 18,
+        child: Text(
+          _authController.currentUser.value?.email?[0].toUpperCase() ?? 'H',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -209,9 +197,9 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
               const SizedBox(height: 24),
               _buildQuickStats(userData.uid),
               const SizedBox(height: 24),
-              _buildSectionTitle('Quick Access'),
+              _buildSectionTitle('Quick Actions'),
               const SizedBox(height: 16),
-              _buildDashboardGrid(),
+              _buildActionsGrid(),
             ],
           ),
         ),
@@ -220,20 +208,25 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
   }
 
   Widget _buildWelcomeCard(userData) {
+    // Extract the username part before the @ symbol
+    String displayName = userData.email != null
+        ? userData.email.split('@')[0]
+        : 'Homeowner';
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+          colors: [Color(0xFF1976D2), Color(0xFF2196F3)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF1E88E5).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -244,47 +237,42 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
           onTap: () => Get.toNamed('/profile'),
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome back!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            userData.email ?? 'Homeowner',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome back!',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 8),
+                      Text(
+                        displayName, // Updated to show only the username part
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.person_outline,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.person_outline,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
               ],
             ),
@@ -322,8 +310,7 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
     );
   }
 
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -376,19 +363,19 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
     );
   }
 
-  Widget _buildDashboardGrid() {
-    final List<Map<String, dynamic>> items = [
+  Widget _buildActionsGrid() {
+    final List<Map<String, dynamic>> actions = [
       {
         'title': 'My Projects',
         'icon': Icons.construction,
         'color': const Color(0xFF2196F3),
-        'route': '/my-projects'
+        'onTap': () => Get.toNamed('/my-projects'),
       },
       {
         'title': 'Find Professionals',
         'icon': Icons.people,
         'color': const Color(0xFF4CAF50),
-        'route': '/find-professionals'
+        'onTap': () => Get.toNamed('/find-professionals'),
       },
       {
         'title': 'Messages',
@@ -400,27 +387,26 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
         'title': 'Payments',
         'icon': Icons.payments_outlined,
         'color': const Color(0xFFE91E63),
-        'route': '/payments'
+        'onTap': () => Get.toNamed('/payments'),
       },
       {
         'title': 'Reviews',
         'icon': Icons.star_border,
         'color': const Color(0xFF9C27B0),
-        'route': '/rate-review'
+        'onTap': () => Get.toNamed('/rate-review'),
       },
       {
         'title': 'My Consultations',
         'icon': Icons.calendar_today,
         'color': const Color(0xFF2196F3),
-        'route': '/homeowner-consultations' // New route
+        'onTap': () => Get.toNamed('/homeowner-consultations'),
       },
-     /* {
-        'title': 'Support',
+      {
+        'title': 'Help & Support',
         'icon': Icons.help_outline,
         'color': const Color(0xFF607D8B),
-        'route': '/support'
-      },*/
-      {'title': 'Support', 'icon': Icons.help_outline, 'color': const Color(0xFF607D8B), 'route': '/homeowner-help'},
+        'onTap': () => Get.toNamed('/homeowner-help'),
+      },
     ];
 
     return GridView.builder(
@@ -432,62 +418,122 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard>
         mainAxisSpacing: 16,
         childAspectRatio: 1.3,
       ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        return _buildDashboardCard(
-          items[index]['title'],
-          items[index]['icon'],
-          items[index]['color'],
-          items[index]['onTap'] ?? () => Get.toNamed(items[index]['route']),
-        );
-      },
+      itemCount: actions.length,
+      itemBuilder: (context, index) => _buildActionCard(actions[index]),
     );
   }
 
-  Widget _buildDashboardCard(
-      String title, IconData icon, Color color, VoidCallback onTap) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
+  Widget _buildActionCard(Map<String, dynamic> action) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        boxShadow: [
+          BoxShadow(
+            color: action['color'].withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: action['onTap'],
+          borderRadius: BorderRadius.circular(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: action['color'].withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 28),
+                child: Icon(action['icon'], color: action['color'], size: 28),
               ),
               const SizedBox(height: 12),
               Text(
-                title,
-                textAlign: TextAlign.center,
+                action['title'],
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: color.withOpacity(0.8),
+                  color: action['color'].withOpacity(0.8),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: Column(
+        children: [
+          _buildDrawerHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildDrawerItem(icon: Icons.dashboard_outlined, title: 'Dashboard', onTap: () => Navigator.pop(context)),
+                  _buildDrawerItem(icon: Icons.construction, title: 'My Projects', onTap: () { Navigator.pop(context); Get.toNamed('/my-projects'); }),
+                  _buildDrawerItem(icon: Icons.people, title: 'Find Professionals', onTap: () { Navigator.pop(context); Get.toNamed('/find-professionals'); }),
+                  _buildDrawerItem(icon: Icons.message, title: 'Messages', onTap: () { Navigator.pop(context); Get.to(() => HomeownerChatScreen()); }),
+                  _buildDrawerItem(icon: Icons.payments_outlined, title: 'Payments', onTap: () { Navigator.pop(context); Get.toNamed('/payments'); }),
+                  _buildDrawerItem(icon: Icons.star_border, title: 'Reviews', onTap: () { Navigator.pop(context); Get.toNamed('/rate-review'); }),
+                  _buildDrawerItem(icon: Icons.calendar_today, title: 'My Consultations', onTap: () { Navigator.pop(context); Get.toNamed('/homeowner-consultations'); }),
+                  const Divider(height: 32),
+                  _buildDrawerItem(icon: Icons.settings_outlined, title: 'Settings', onTap: () {}),
+                  _buildDrawerItem(icon: Icons.help_outline, title: 'Help & Support', onTap: () { Navigator.pop(context); Get.toNamed('/homeowner-help'); }),
+                  _buildDrawerItem(icon: Icons.logout, title: 'Sign Out', onTap: () { Navigator.pop(context); _handleSignOut(); }, color: Colors.red),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 1)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF2196F3).withOpacity(0.1),
+            ),
+            child: const Center(child: Icon(Icons.person_outline, size: 40, color: Color(0xFF2196F3))),
+          ),
+          const SizedBox(height: 16),
+          Text(_authController.currentUser.value?.email ?? 'Homeowner', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+          const SizedBox(height: 4),
+          Text('Homeowner', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({required IconData icon, required String title, required VoidCallback onTap, Color? color}) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? const Color(0xFF1976D2), size: 24),
+      title: Text(title, style: TextStyle(color: color ?? const Color(0xFF1E1E1E), fontSize: 16, fontWeight: FontWeight.w500)),
+      onTap: onTap,
+      dense: true,
+      horizontalTitleGap: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 }

@@ -7,6 +7,7 @@ class Message {
   final String content;
   final DateTime timestamp;
   final String type; // e.g., 'homeowner_contractor'
+  bool read;
 
   Message({
     required this.id,
@@ -15,6 +16,7 @@ class Message {
     required this.content,
     required this.timestamp,
     required this.type,
+    this.read = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -33,6 +35,7 @@ class Message {
       content: map['content'] as String,
       timestamp: DateTime.parse(map['timestamp'] as String),
       type: map['type'] as String,
+      read: map['read'] as bool? ?? false,
     );
   }
 }

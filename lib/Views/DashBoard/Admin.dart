@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:buildbuddy/Controllers/authControllers.dart'; // Correct import for AuthController
-import 'package:buildbuddy/Controllers/adminController.dart'; // Correct import for AdminController
+import 'package:buildbuddy/Controllers/authControllers.dart';
+import 'package:buildbuddy/Controllers/adminController.dart';
 import 'package:provider/provider.dart';
 import '../../Models/userModels.dart';
-import '../Shared/widgets/appBarColor.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -13,8 +13,7 @@ class AdminDashboard extends StatefulWidget {
   AdminDashboardState createState() => AdminDashboardState();
 }
 
-class AdminDashboardState extends State<AdminDashboard>
-    with SingleTickerProviderStateMixin {
+class AdminDashboardState extends State<AdminDashboard> with SingleTickerProviderStateMixin {
   final AuthController _authController = Get.find<AuthController>();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -37,7 +36,6 @@ class AdminDashboardState extends State<AdminDashboard>
 
   Future<void> _loadInitialData() async {
     final adminController = Provider.of<AdminController?>(context, listen: false);
-    print('Loading initial data: adminController=${adminController != null ? "present" : "null"}, user=${_authController.currentUser.value?.email}, role=${_authController.currentUser.value?.role}');
     if (adminController != null) {
       try {
         await Future.wait([
@@ -46,13 +44,11 @@ class AdminDashboardState extends State<AdminDashboard>
           adminController.loadContractors(),
           adminController.loadSupportTickets(),
           adminController.loadContent(),
-        ] as Iterable<Future<void>>); // Cast to Iterable<Future<void>>
+        ]);
       } catch (e) {
         Get.snackbar('Error', 'Failed to load data: $e',
             snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
       }
-    } else {
-      print('AdminController is null, skipping data load');
     }
   }
 
@@ -72,11 +68,11 @@ class AdminDashboardState extends State<AdminDashboard>
           content: const Text('Are you sure you want to sign out?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -102,10 +98,8 @@ class AdminDashboardState extends State<AdminDashboard>
   @override
   Widget build(BuildContext context) {
     final adminController = Provider.of<AdminController?>(context, listen: false);
-    print('AdminDashboard build: adminController=${adminController != null ? "present" : "null"}, user=${_authController.currentUser.value?.email}, role=${_authController.currentUser.value?.role}');
     return Consumer<AdminController?>(
       builder: (context, controller, _) {
-        print('Consumer builder: controller=${controller != null ? "present" : "null"}, user=${_authController.currentUser.value?.email}, role=${_authController.currentUser.value?.role}');
         if (controller == null) {
           return const Scaffold(
             body: Center(
@@ -117,8 +111,9 @@ class AdminDashboardState extends State<AdminDashboard>
           );
         }
         return Scaffold(
-          backgroundColor: const Color(0xFFF8F9FA),
+          backgroundColor: const Color(0xFFE3F2FD),
           appBar: _buildAppBar(),
+          drawer: _buildDrawer(),
           body: Obx(() {
             final userData = _authController.currentUser.value;
             if (userData == null) {
@@ -136,10 +131,18 @@ class AdminDashboardState extends State<AdminDashboard>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // Changed to light for white icons
+      ),
+      backgroundColor: const Color(0xFF1976D2), // Changed to deep blue
       elevation: 0,
-      backgroundColor: kAppBarColor,
-      title: const Text('Build Buddy Admin',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white), // Changed to white
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
+      ),
       actions: [
         _buildNotificationButton(),
         _buildProfileButton(),
@@ -151,7 +154,7 @@ class AdminDashboardState extends State<AdminDashboard>
     return Stack(
       children: [
         IconButton(
-          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+          icon: const Icon(Icons.notifications_outlined, color: Colors.white), // Changed to white
           onPressed: () => Get.toNamed('/notifications'),
         ),
         Positioned(
@@ -160,6 +163,7 @@ class AdminDashboardState extends State<AdminDashboard>
           child: Container(
             padding: const EdgeInsets.all(2),
             decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
             child: Consumer<AdminController?>(
               builder: (context, controller, _) => Text(
                 controller != null
@@ -168,7 +172,11 @@ class AdminDashboardState extends State<AdminDashboard>
                     .length
                     .toString()
                     : '0',
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -179,9 +187,19 @@ class AdminDashboardState extends State<AdminDashboard>
   }
 
   Widget _buildProfileButton() {
-    return IconButton(
-      icon: const Icon(Icons.logout, color: Colors.white),
-      onPressed: _handleSignOut,
+    return Padding(
+      padding: const EdgeInsets.only(right: 16.0),
+      child: CircleAvatar(
+        backgroundColor: const Color(0xFF2196F3), // Kept for contrast
+        radius: 18,
+        child: Text(
+          _authController.currentUser.value?.email?[0].toUpperCase() ?? 'A',
+          style: const TextStyle(
+            color: Colors.white, // Already white
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 
@@ -207,9 +225,9 @@ class AdminDashboardState extends State<AdminDashboard>
                 const SizedBox(height: 24),
                 _buildQuickStats(controller),
                 const SizedBox(height: 24),
-                _buildSectionTitle('Admin Quick Access'),
+                _buildSectionTitle('Quick Actions'),
                 const SizedBox(height: 16),
-                _buildDashboardGrid(),
+                _buildActionsGrid(),
               ],
             ),
           ),
@@ -223,13 +241,17 @@ class AdminDashboardState extends State<AdminDashboard>
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+          colors: [Color(0xFF1976D2), Color(0xFF2196F3)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.blue.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: const Color(0xFF1E88E5).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Material(
@@ -245,19 +267,36 @@ class AdminDashboardState extends State<AdminDashboard>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Welcome back!',
-                          style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.9))),
+                      Text(
+                        'Welcome back!',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      Text(userData.email ?? 'Admin',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text(
+                        userData.email ?? 'Admin',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration:
-                  BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.admin_panel_settings_outlined, color: Colors.white, size: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.admin_panel_settings_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
               ],
             ),
@@ -290,17 +329,35 @@ class AdminDashboardState extends State<AdminDashboard>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: color.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 24, semanticLabel: title),
+            Icon(icon, color: color, size: 24),
             const SizedBox(height: 12),
-            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(title,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.2)),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                height: 1.2,
+              ),
+            ),
           ],
         ),
       ),
@@ -308,47 +365,59 @@ class AdminDashboardState extends State<AdminDashboard>
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(title,
-        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)));
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF1E1E1E),
+      ),
+    );
   }
 
-  Widget _buildDashboardGrid() {
-    final List<Map<String, dynamic>> items = [
+  Widget _buildActionsGrid() {
+    final List<Map<String, dynamic>> actions = [
       {
-        'title': 'User Management',
+        'title': 'Manage Users',
         'icon': Icons.people,
         'color': const Color(0xFF2196F3),
-        'route': '/user-management'
+        'onTap': () => Get.toNamed('/manage-users'),
       },
       {
-        'title': 'Project Monitoring',
+        'title': 'Manage Projects',
         'icon': Icons.construction,
         'color': const Color(0xFF4CAF50),
-        'route': '/project-monitoring'
+        'onTap': () => Get.toNamed('/manage-projects-admin'),
       },
       {
-        'title': 'Reports',
-        'icon': Icons.bar_chart,
+        'title': 'Manage Contractors',
+        'icon': Icons.engineering,
         'color': const Color(0xFFFFC107),
-        'route': '/reports'
+        'onTap': () => Get.toNamed('/manage-contractors'),
+      },
+      {
+        'title': 'Support Tickets',
+        'icon': Icons.support_agent,
+        'color': const Color(0xFFE91E63),
+        'onTap': () => Get.toNamed('/support-tickets'),
       },
       {
         'title': 'Content Management',
-        'icon': Icons.article,
-        'color': const Color(0xFFE91E63),
-        'route': '/content-management'
-      },
-      {
-        'title': 'Settings',
-        'icon': Icons.settings,
+        'icon': Icons.edit_document,
         'color': const Color(0xFF9C27B0),
-        'route': '/admin-settings'
+        'onTap': () => Get.toNamed('/content-management'),
       },
       {
-        'title': 'Support',
+        'title': 'Analytics',
+        'icon': Icons.analytics_outlined,
+        'color': const Color(0xFF607D8B),
+        'onTap': () => Get.toNamed('/admin-analytics'),
+      },
+      {
+        'title': 'Help & Support',
         'icon': Icons.help_outline,
         'color': const Color(0xFF607D8B),
-        'route': '/admin-support'
+        'onTap': () => Get.toNamed('/admin-help'),
       },
     ];
 
@@ -361,46 +430,129 @@ class AdminDashboardState extends State<AdminDashboard>
         mainAxisSpacing: 16,
         childAspectRatio: 1.3,
       ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        return _buildDashboardCard(
-          items[index]['title'],
-          items[index]['icon'],
-          items[index]['color'],
-              () => Get.toNamed(items[index]['route']),
-        );
-      },
+      itemCount: actions.length,
+      itemBuilder: (context, index) => _buildActionCard(actions[index]),
     );
   }
 
-  Widget _buildDashboardCard(String title, IconData icon, Color color, VoidCallback onTap) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
+  Widget _buildActionCard(Map<String, dynamic> action) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: color.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: action['color'].withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: action['onTap'],
+          borderRadius: BorderRadius.circular(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
-                child: Icon(icon, color: color, size: 28, semanticLabel: title),
+                decoration: BoxDecoration(
+                  color: action['color'].withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(action['icon'], color: action['color'], size: 28),
               ),
               const SizedBox(height: 12),
-              Text(title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: color.withOpacity(0.8))),
+              Text(
+                action['title'],
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: action['color'].withOpacity(0.8),
+                ),
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: Column(
+        children: [
+          _buildDrawerHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildDrawerItem(icon: Icons.dashboard_outlined, title: 'Dashboard', onTap: () => Navigator.pop(context)),
+                  _buildDrawerItem(icon: Icons.people, title: 'Manage Users', onTap: () { Navigator.pop(context); Get.toNamed('/manage-users'); }),
+                  _buildDrawerItem(icon: Icons.construction, title: 'Manage Projects', onTap: () { Navigator.pop(context); Get.toNamed('/manage-projects-admin'); }),
+                  _buildDrawerItem(icon: Icons.engineering, title: 'Manage Contractors', onTap: () { Navigator.pop(context); Get.toNamed('/manage-contractors'); }),
+                  _buildDrawerItem(icon: Icons.support_agent, title: 'Support Tickets', onTap: () { Navigator.pop(context); Get.toNamed('/support-tickets'); }),
+                  _buildDrawerItem(icon: Icons.edit_document, title: 'Content Management', onTap: () { Navigator.pop(context); Get.toNamed('/content-management'); }),
+                  _buildDrawerItem(icon: Icons.analytics_outlined, title: 'Analytics', onTap: () { Navigator.pop(context); Get.toNamed('/admin-analytics'); }),
+                  const Divider(height: 32),
+                  _buildDrawerItem(icon: Icons.settings_outlined, title: 'Settings', onTap: () {}),
+                  _buildDrawerItem(icon: Icons.help_outline, title: 'Help & Support', onTap: () { Navigator.pop(context); Get.toNamed('/admin-help'); }),
+                  _buildDrawerItem(icon: Icons.logout, title: 'Sign Out', onTap: () { Navigator.pop(context); _handleSignOut(); }, color: Colors.red),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 1)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF2196F3).withOpacity(0.1),
+            ),
+            child: const Center(child: Icon(Icons.admin_panel_settings_outlined, size: 40, color: Color(0xFF2196F3))),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _authController.currentUser.value?.email ?? 'Admin',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Administrator',
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({required IconData icon, required String title, required VoidCallback onTap, Color? color}) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? const Color(0xFF1976D2), size: 24),
+      title: Text(title, style: TextStyle(color: color ?? const Color(0xFF1E1E1E), fontSize: 16, fontWeight: FontWeight.w500)),
+      onTap: onTap,
+      dense: true,
+      horizontalTitleGap: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 }

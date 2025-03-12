@@ -154,44 +154,58 @@ class MaterialOrdersScreen extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white24,
-                                    borderRadius: BorderRadius.circular(12),
+                            Flexible(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white24,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.shopping_cart, color: Colors.white, size: 28),
                                   ),
-                                  child: const Icon(Icons.shopping_cart, color: Colors.white, size: 28),
-                                ),
-                                const SizedBox(width: 12),
-                                const Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'My Orders',
-                                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                                  const SizedBox(width: 12),
+                                  const Flexible(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'My Orders',
+                                          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'Manage your material orders',
+                                          style: TextStyle(color: Colors.white70, fontSize: 14),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      'Manage your material orders',
-                                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                  ),
+                                ],
+                              ),
                             ),
                             Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 TextButton(
                                   onPressed: () => _showDedicatedPlaceOrderDialog(context, context.read<ContractorController>()),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
                                   child: const Text(
                                     'Place Order',
-                                    style: TextStyle(color: Colors.white, fontSize: 16),
+                                    style: TextStyle(color: Colors.white, fontSize: 14),
                                   ),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.filter_list, color: Colors.white),
                                   onPressed: () {},
+                                  padding: const EdgeInsets.all(4.0),
+                                  constraints: const BoxConstraints(),
                                 ),
                               ],
                             ),
@@ -296,19 +310,27 @@ class MaterialOrdersScreen extends StatelessWidget {
                       'Quantity: ${order.quantity}, Status: ${order.status}',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '\$${order.amount.toStringAsFixed(2)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4834DF)),
-                        ),
-                        if (order.status != 'Cancelled')
-                          IconButton(
-                            icon: const Icon(Icons.cancel, color: Colors.red),
-                            onPressed: () => _showCancelOrderDialog(context, controller, order),
+                    trailing: SizedBox(
+                      width: 110,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              '\$${order.amount.toStringAsFixed(2)}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4834DF)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                      ],
+                          if (order.status != 'Cancelled')
+                            IconButton(
+                              icon: const Icon(Icons.cancel, color: Colors.red),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _showCancelOrderDialog(context, controller, order),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 )),
