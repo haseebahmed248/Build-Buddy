@@ -70,7 +70,7 @@ class ProjectController extends ChangeNotifier {
       print(_errorMessage);
       Get.snackbar('Error', _errorMessage!,
           snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
-      Get.offAllNamed('/login'); // Redirect to login screen
+      Get.offAllNamed('/login');
       return;
     }
 
@@ -80,12 +80,15 @@ class ProjectController extends ChangeNotifier {
     switch (_userType) {
       case 'homeowner':
         query = _database.child('projects').orderByChild('userId').equalTo(user.uid);
+        print('Query set for homeowner with userId: ${user.uid}');
         break;
       case 'contractor':
         query = _database.child('projects').orderByChild('assignedContractorId').equalTo(user.uid);
+        print('Query set for contractor with userId: ${user.uid}');
         break;
       case 'architect':
         query = _database.child('projects').orderByChild('assignedArchitectId').equalTo(user.uid);
+        print('Query set for architect with userId: ${user.uid}');
         break;
       case 'vendor':
         _errorMessage = 'Vendors do not have direct access to projects.';
@@ -93,6 +96,10 @@ class ProjectController extends ChangeNotifier {
         _projects.clear();
         notifyListeners();
         return;
+      case 'admin':
+        query = _database.child('projects');
+        print('Query set for admin (all projects)');
+        break;
       default:
         _errorMessage = 'Invalid userType: $_userType';
         print(_errorMessage);
@@ -114,15 +121,16 @@ class ProjectController extends ChangeNotifier {
               projectMap['id'] = projectId as String;
               try {
                 final project = Project.fromMap(projectMap);
-                if ((_userType == 'homeowner' && project.userId == user.uid) ||
-                    (_userType == 'contractor' && project.assignedContractorId == user.uid) ||
-                    (_userType == 'architect' && project.assignedArchitectId == user.uid)) {
-                  print('Adding project: $projectId, title=${project.title}, userId=${project.userId}, assignedContractorId=${project.assignedContractorId}');
-                  _projects.add(project);
-                  _startMessageListener(projectId);
-                } else {
+                if (_userType != 'admin' &&
+                    !((_userType == 'homeowner' && project.userId == user.uid) ||
+                        (_userType == 'contractor' && project.assignedContractorId == user.uid) ||
+                        (_userType == 'architect' && project.assignedArchitectId == user.uid))) {
                   print('Skipping project $projectId: User ${user.uid} does not have access');
+                  return;
                 }
+                print('Adding project: $projectId, title=${project.title}, userId=${project.userId}, assignedContractorId=${project.assignedContractorId}, status=${project.status}');
+                _projects.add(project);
+                _startMessageListener(projectId);
               } catch (e) {
                 _errorMessage = 'Error parsing project $projectId: $e';
                 print('$_errorMessage, Data: $projectMap');
@@ -134,7 +142,7 @@ class ProjectController extends ChangeNotifier {
             final dateB = b.date ?? DateTime.now();
             return dateB.compareTo(dateA);
           });
-          print('Final projects list: ${_projects.length} projects');
+          print('Final projects list: ${_projects.length} projects, IDs: ${ _projects.map((p) => p.id).join(", ")}');
           _loadStats(user.uid).then((_) {
             _errorMessage = null;
             notifyListeners();
@@ -301,7 +309,46 @@ class ProjectController extends ChangeNotifier {
     _errorMessage = null;
     print('Stopped all real-time listeners');
   }
+  /*Future<void> loadProjects() async {
+    _isLoading = true;
+    notifyListeners();
 
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      _errorMessage = 'No user logged in, please log in';
+      _isLoading = false;
+      notifyListeners();
+      Get.snackbar('Error', _errorMessage!,
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
+      return;
+    }
+
+    try {
+      print("Loading projects for user: ${user.uid}, type: $_userType");
+      _projects = await _projectService.getProjects(user.uid, _userType);
+      print("Projects retrieved: ${_projects.length} for ${user.uid}, type: $_userType");
+      _projects.forEach((project) {
+        print("Loaded project: ${project.id}, userId: ${project.userId}, assignedContractorId: ${project.assignedContractorId}, status: ${project.status}");
+      });
+
+      for (var project in _projects) {
+        _startMessageListener(project.id);
+      }
+
+      // Ensure stats are loaded after projects
+      await _loadStats(user.uid);
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = 'Failed to load projects: $e';
+      print("Error loading projects: $_errorMessage");
+      _projects.clear();
+      Get.snackbar('Error', _errorMessage!,
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }*/
   Future<void> loadProjects() async {
     _isLoading = true;
     notifyListeners();
@@ -321,7 +368,64 @@ class ProjectController extends ChangeNotifier {
       _projects = await _projectService.getProjects(user.uid, _userType);
       print("Projects retrieved: ${_projects.length} for ${user.uid}, type: $_userType");
       _projects.forEach((project) {
-        print("Loaded project: ${project.id}, userId: ${project.userId}, assignedContractorId: ${project.assignedContractorId}");
+        print("Loaded project: id=${project.id}, userId=${project.userId}, status=${project.status}, data=${project.toMap()}");
+      });
+
+      for (var project in _projects) {
+        _startMessageListener(project.id);
+      }
+
+      await _loadStats(user.uid);
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = 'Failed to load projects: $e';
+      print("Error loading projects: $_errorMessage, Stack trace: ${StackTrace.current}");
+      _projects.clear();
+      Get.snackbar('Error', _errorMessage!,
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadStats(String userId) async {
+    try {
+      print("Loading stats for userId: $userId");
+      _activeProjectsCount = await _projectService.getActiveProjectsCount(userId);
+      _pendingReviewsCount = await _projectService.getPendingReviewsCount(userId);
+      _newMessagesCount = await _projectService.getNewMessagesCount(userId, _userType);
+      print("Stats loaded - Active: $_activeProjectsCount, Pending Reviews: $_pendingReviewsCount, New Messages: $_newMessagesCount");
+    } catch (e) {
+      _errorMessage = 'Failed to load stats: $e';
+      print(_errorMessage);
+      _activeProjectsCount = 0;
+      _pendingReviewsCount = 0;
+      _newMessagesCount = 0;
+    }
+    notifyListeners();
+  }
+
+  /*Future<void> loadProjects() async {
+    _isLoading = true;
+    notifyListeners();
+
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      _errorMessage = 'No user logged in, please log in';
+      _isLoading = false;
+      notifyListeners();
+      Get.snackbar('Error', _errorMessage!,
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
+      return;
+    }
+
+    try {
+      print("Loading projects for user: ${user.uid}, type: $_userType");
+      _projects = await _projectService.getProjects(user.uid, _userType);
+      print("Projects retrieved: ${_projects.length} for ${user.uid}, type: $_userType");
+      _projects.forEach((project) {
+        print("Loaded project: ${project.id}, userId: ${project.userId}, assignedContractorId: ${project.assignedContractorId}, status: ${project.status}");
       });
 
       for (var project in _projects) {
@@ -344,6 +448,7 @@ class ProjectController extends ChangeNotifier {
 
   Future<void> _loadStats(String userId) async {
     try {
+      print("Loading stats for userId: $userId");
       _activeProjectsCount = await _projectService.getActiveProjectsCount(userId);
       _pendingReviewsCount = await _projectService.getPendingReviewsCount(userId);
       _newMessagesCount = await _projectService.getNewMessagesCount(userId, _userType);
@@ -363,7 +468,7 @@ class ProjectController extends ChangeNotifier {
     }
     notifyListeners();
   }
-
+*/
   Future<void> loadProfessionals() async {
     _isLoading = true;
     notifyListeners();

@@ -35,20 +35,18 @@ class AdminDashboardState extends State<AdminDashboard> with SingleTickerProvide
   }
 
   Future<void> _loadInitialData() async {
-    final adminController = Provider.of<AdminController?>(context, listen: false);
-    if (adminController != null) {
-      try {
-        await Future.wait([
-          adminController.loadUsers(),
-          adminController.loadProjects(),
-          adminController.loadContractors(),
-          adminController.loadSupportTickets(),
-          adminController.loadContent(),
-        ]);
-      } catch (e) {
-        Get.snackbar('Error', 'Failed to load data: $e',
-            snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
-      }
+    final adminController = Provider.of<AdminController?>(context, listen: false) ?? AdminController(_authController);
+    try {
+      await Future.wait([
+        adminController.loadUsers(),
+        adminController.loadProjects(),
+        adminController.loadContractors(),
+        adminController.loadSupportTickets(),
+        adminController.loadContent(),
+      ]);
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to load data: $e',
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red);
     }
   }
 
@@ -100,16 +98,6 @@ class AdminDashboardState extends State<AdminDashboard> with SingleTickerProvide
     final adminController = Provider.of<AdminController?>(context, listen: false);
     return Consumer<AdminController?>(
       builder: (context, controller, _) {
-        if (controller == null) {
-          return const Scaffold(
-            body: Center(
-              child: Text(
-                'Access Denied: Admin privileges required',
-                style: TextStyle(color: Colors.red, fontSize: 18),
-              ),
-            ),
-          );
-        }
         return Scaffold(
           backgroundColor: const Color(0xFFE3F2FD),
           appBar: _buildAppBar(),
@@ -119,10 +107,7 @@ class AdminDashboardState extends State<AdminDashboard> with SingleTickerProvide
             if (userData == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (!userData.isAdmin) {
-              return const Center(child: Text('Unauthorized Access: Admins Only'));
-            }
-            return _buildBody(userData, controller);
+            return _buildBody(userData, controller ?? AdminController(_authController));
           }),
         );
       },
@@ -133,13 +118,13 @@ class AdminDashboardState extends State<AdminDashboard> with SingleTickerProvide
     return AppBar(
       systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light, // Changed to light for white icons
+        statusBarIconBrightness: Brightness.light,
       ),
-      backgroundColor: const Color(0xFF1976D2), // Changed to deep blue
+      backgroundColor: const Color(0xFF1976D2),
       elevation: 0,
       leading: Builder(
         builder: (context) => IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white), // Changed to white
+          icon: const Icon(Icons.menu, color: Colors.white),
           onPressed: () => Scaffold.of(context).openDrawer(),
         ),
       ),
@@ -154,7 +139,7 @@ class AdminDashboardState extends State<AdminDashboard> with SingleTickerProvide
     return Stack(
       children: [
         IconButton(
-          icon: const Icon(Icons.notifications_outlined, color: Colors.white), // Changed to white
+          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
           onPressed: () => Get.toNamed('/notifications'),
         ),
         Positioned(
@@ -190,12 +175,12 @@ class AdminDashboardState extends State<AdminDashboard> with SingleTickerProvide
     return Padding(
       padding: const EdgeInsets.only(right: 16.0),
       child: CircleAvatar(
-        backgroundColor: const Color(0xFF2196F3), // Kept for contrast
+        backgroundColor: const Color(0xFF2196F3),
         radius: 18,
         child: Text(
           _authController.currentUser.value?.email?[0].toUpperCase() ?? 'A',
           style: const TextStyle(
-            color: Colors.white, // Already white
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),

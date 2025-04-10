@@ -63,6 +63,7 @@ import '../Views/DashBoard/Admin/contentManagement.dart';
 import '../Views/DashBoard/Admin/settings.dart';
 import '../Views/DashBoard/Admin/support.dart';
 
+
 // Architect Screens
 import '../Views/DashBoard/Architect/viewProjectPlans.dart';
 
@@ -86,6 +87,11 @@ class RoleBasedMiddleware extends GetMiddleware {
       print('User not authenticated: redirecting to /stakeholder');
       Get.snackbar('Unauthorized', 'Please sign in as a ${requiredRole.name}');
       return const RouteSettings(name: '/stakeholder');
+    }
+
+    // Skip role check for /adminDashboard to match your requirement
+    if (route == '/adminDashboard') {
+      return null; // Allow all authenticated users to access admin dashboard
     }
 
     switch (requiredRole) {
@@ -130,7 +136,7 @@ class RoleBasedMiddleware extends GetMiddleware {
         }
         break;
     }
-    return null; // Allow navigation if role matches
+    return null; // Allow navigation if role matches or no redirect needed
   }
 }
 
@@ -152,7 +158,7 @@ class AppRoutes {
     // Stakeholder Selection
     GetPage(name: '/stakeholder', page: () => const StakeholderSelection()),
 
-    // Admin Routes (Restricted to admin users)
+    // Admin Routes (Restricted to admin users except /adminDashboard)
     GetPage(
       name: '/adminSignIn',
       page: () => const AdminSignInScreen(),
@@ -161,30 +167,24 @@ class AppRoutes {
       name: '/adminDashboard',
       page: () => const AdminDashboard.AdminDashboard(),
       middlewares: [
-        RoleBasedMiddleware(UserRole.admin),
+        RoleBasedMiddleware(UserRole.admin), // Middleware allows all authenticated users due to override
       ],
     ),
     GetPage(
-      name: '/user-management',
+      name: '/manage-users',
       page: () => UserManagement(),
       middlewares: [
         RoleBasedMiddleware(UserRole.admin),
       ],
     ),
     GetPage(
-      name: '/project-monitoring',
+      name: '/manage-projects-admin', // Changed to avoid conflict with contractor route
       page: () => ProjectMonitoring(),
       middlewares: [
         RoleBasedMiddleware(UserRole.admin),
       ],
     ),
-    GetPage(
-      name: '/reports',
-      page: () => Reports(),
-      middlewares: [
-        RoleBasedMiddleware(UserRole.admin),
-      ],
-    ),
+
     GetPage(
       name: '/content-management',
       page: () => ContentManagement(),
@@ -192,15 +192,17 @@ class AppRoutes {
         RoleBasedMiddleware(UserRole.admin),
       ],
     ),
+
+
     GetPage(
-      name: '/settings',
+      name: '/admin-settings',
       page: () => Settings(),
       middlewares: [
         RoleBasedMiddleware(UserRole.admin),
       ],
     ),
     GetPage(
-      name: '/support',
+      name: '/admin-support',
       page: () => Support(),
       middlewares: [
         RoleBasedMiddleware(UserRole.admin),
@@ -231,7 +233,7 @@ class AppRoutes {
       ],
     ),
     GetPage(
-      name: '/settings',
+      name: '/homeowner-settings',
       page: () => const SettingsDashboard(),
       middlewares: [
         RoleBasedMiddleware(UserRole.homeowner),
@@ -254,8 +256,6 @@ class AppRoutes {
         RoleBasedMiddleware(UserRole.homeowner),
       ],
     ),
-
-
     GetPage(
       name: '/homeowner-consultations',
       page: () => const HomeOwnerConsultationScreen(),
@@ -263,7 +263,6 @@ class AppRoutes {
         RoleBasedMiddleware(UserRole.homeowner),
       ],
     ),
-
     GetPage(
       name: '/rate-review',
       page: () => const RateReviewDashboard(),
@@ -325,9 +324,7 @@ class AppRoutes {
     ),
     GetPage(
       name: '/contractor-messages',
-      page: () {
-        return const ManageProjectsScreen(userType: 'contractor');
-      },
+      page: () => const ManageProjectsScreen(userType: 'contractor'),
       middlewares: [
         RoleBasedMiddleware(UserRole.contractor),
       ],
@@ -481,18 +478,3 @@ class AppRoutes {
     ),
   ];
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

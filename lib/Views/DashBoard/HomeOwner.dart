@@ -30,12 +30,16 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard> with SingleTicke
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
+    // Ensure projects are loaded after the user is confirmed
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final user = _authController.currentUser.value;
-        if (user != null) {
-          Provider.of<ProjectController>(context, listen: false).loadProjects();
-        }
+      final user = _authController.currentUser.value;
+      if (user != null) {
+        final projectController = Provider.of<ProjectController>(context, listen: false);
+        projectController.updateUserType('homeowner');
+        projectController.startListeningAfterRoleSelection();
+        projectController.loadProjects().catchError((e) {
+          print('Failed to load projects in initState: $e');
+        });
       }
     });
   }
@@ -102,9 +106,22 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard> with SingleTicke
             ),
           );
         }
-        return FadeTransition(
-          opacity: _fadeAnimation,
-          child: _buildBody(userData),
+        return Consumer<ProjectController>(
+          builder: (context, controller, child) {
+            if (controller.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (controller.errorMessage != null) {
+              return Center(child: Text('Error: ${controller.errorMessage}'));
+            }
+            if (controller.projects.isEmpty) {
+              return const Center(child: Text('No projects found.'));
+            }
+            return FadeTransition(
+              opacity: _fadeAnimation,
+              child: _buildBody(userData),
+            );
+          },
         );
       }),
     );
@@ -114,13 +131,13 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard> with SingleTicke
     return AppBar(
       systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light, // Changed to light for white icons
+        statusBarIconBrightness: Brightness.light,
       ),
-      backgroundColor: const Color(0xFF1976D2), // Changed to deep blue
+      backgroundColor: const Color(0xFF1976D2),
       elevation: 0,
       leading: Builder(
         builder: (context) => IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white), // Changed to white
+          icon: const Icon(Icons.menu, color: Colors.white),
           onPressed: () => Scaffold.of(context).openDrawer(),
         ),
       ),
@@ -208,11 +225,7 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard> with SingleTicke
   }
 
   Widget _buildWelcomeCard(userData) {
-    // Extract the username part before the @ symbol
-    String displayName = userData.email != null
-        ? userData.email.split('@')[0]
-        : 'Homeowner';
-
+    String displayName = userData.email != null ? userData.email.split('@')[0] : 'Homeowner';
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -252,7 +265,7 @@ class HomeOwnerDashboardState extends State<HomeOwnerDashboard> with SingleTicke
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        displayName, // Updated to show only the username part
+                        displayName,
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
